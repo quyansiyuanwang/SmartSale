@@ -1,0 +1,132 @@
+/* ============ 通用 ============ */
+.no-pad { padding: 0; }
+.tiny { font-size: 12px; color: var(--ion-color-medium); }
+.price { font-weight: 700; color: var(--ion-color-primary); }
+.section-title { font-weight: 600; color: var(--ion-color-medium); margin: 16px 4px 8px; font-size: 14px; }
+.more-link { color: var(--ion-color-primary); font-size: 13px; margin-top: 8px; }
+.center-note { text-align: center; color: var(--ion-color-medium); font-size: 12px; margin-top: 16px; }
+.block-note { display: block; white-space: normal; }
+.item-head .ion-label { font-weight: 600; }
+
+/* ============ 首页 ============ */
+.greet-card {
+  background: linear-gradient(135deg, #3880ff, #6a5cff);
+  color: #fff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.greet-title { font-size: 22px; font-weight: 700; }
+.greet-sub { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+.stat-grid { margin: 0 -4px; }
+.stat-card {
+  background: var(--ion-color-light);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 4px;
+  text-align: center;
+}
+.stat-card.warn { background: #fdecec; }
+.stat-num { font-size: 20px; font-weight: 700; color: var(--ion-color-dark); }
+.stat-card.warn .stat-num { color: var(--ion-color-danger); }
+.stat-label { font-size: 12px; color: var(--ion-color-medium); margin-top: 4px; }
+.quick-actions { display: flex; gap: 10px; margin-bottom: 4px; }
+.quick-actions ion-button { flex: 1; margin: 0; }
+.tip-text { color: var(--ion-color-medium); font-size: 14px; line-height: 1.6; }
+
+/* ============ 商品 ============ */
+.prod-thumb { --border-radius: 10px; }
+.thumb-inner {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #3880ff, #6a5cff);
+  color: #fff; font-weight: 700; font-size: 18px;
+}
+.prod-right { text-align: right; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+/* ============ 销售 ============ */
+.pick-list { border-radius: 12px; overflow: hidden; }
+.card-header { padding-bottom: 4px; }
+.num-row { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
+.qty-input {
+  --padding-start: 8px; --padding-end: 8px;
+  width: 70px; --min-height: 36px; --border-radius: 8px;
+  --background: var(--ion-color-light); text-align: center;
+}
+.qty-label { color: var(--ion-color-medium); }
+.total-row { font-size: 20px; margin: 10px 0; }
+.total-row b { color: var(--ion-color-danger); font-size: 26px; }
+
+/* ============ 报表 ============ */
+.weekly-card { border-radius: 16px; }
+.mini-stat { text-align: center; padding: 8px 0; }
+.mini-stat .num { font-size: 18px; font-weight: 700; color: var(--ion-color-dark); }
+.mini-stat .label { font-size: 12px; color: var(--ion-color-medium); margin-top: 2px; }
+.cmd-row { display: flex; align-items: center; gap: 8px; }
+.cmd-input { background: var(--ion-color-light); border-radius: 10px; --padding-start: 12px; }
+.listening-note { display: block; margin-top: 6px; }
+.cmd-result {
+  display: flex; gap: 10px; margin-top: 12px;
+  background: #f4f6ff; border-radius: 12px; padding: 12px;
+}
+.cmd-result > ion-icon { color: var(--ion-color-primary); margin-top: 4px; }
+.result-tag {
+  display: inline-block; font-size: 11px; color: var(--ion-color-primary);
+  background: #e4ecff; border-radius: 6px; padding: 1px 6px; margin-bottom: 6px;
+}
+.cmd-result pre { white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 14px; line-height: 1.6; }
+
+/* ============ 预警 ============ */
+.alert-right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+/* ============ 咨询 ============ */
+.q-head { display: flex; align-items: center; gap: 8px; }
+.q-head h2 { margin: 0; font-size: 16px; }
+.q-answer { white-space: pre-wrap; font-size: 13px; color: var(--ion-color-medium); margin-top: 6px; line-height: 1.6; }
+.q-time { font-size: 12px; color: var(--ion-color-light-shade); margin-top: 6px; }
+
+/* ============ 我的 ============ */
+.profile-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 20px;
+  background: linear-gradient(135deg, #3880ff, #6a5cff);
+  color: #fff; margin-bottom: 8px;
+}
+.profile-card h2 { margin: 0; font-size: 20px; }
+.profile-card p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+.shop-avatar {
+  width: 52px; height: 52px; background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.shop-avatar ion-icon { width: 30px; height: 30px; color: #fff; }
+
+/* ============ 买家端 ============ */
+.buyer-hero {
+  background: linear-gradient(135deg, #3880ff, #6a5cff);
+  color: #fff; padding: 18px 16px;
+}
+.buyer-hero h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.5; }
+.buyer-hero ion-chip { margin: 2px; }
+.chat-area { padding: 12px 12px 80px; min-height: 200px; }
+.msg { display: flex; margin-bottom: 10px; }
+.msg.user { justify-content: flex-end; }
+.msg.assistant { justify-content: flex-start; }
+.bubble {
+  max-width: 82%; border-radius: 14px; padding: 10px 12px;
+  font-size: 14px; line-height: 1.6;
+}
+.msg.user .bubble { background: var(--ion-color-primary); color: #fff; border-bottom-right-radius: 4px; }
+.msg.assistant .bubble { background: #f1f3f5; color: var(--ion-color-dark); border-bottom-left-radius: 4px; }
+.source-tag {
+  display: inline-block; font-size: 11px; color: var(--ion-color-primary);
+  background: #e4ecff; border-radius: 6px; padding: 1px 6px; margin-right: 6px; vertical-align: middle;
+}
+.thinking { display: flex; align-items: center; gap: 8px; color: var(--ion-color-medium); }
+.empty-tip { text-align: center; color: var(--ion-color-medium); font-size: 13px; padding: 40px 20px; line-height: 1.8; }
+.promo-card { margin: 0 12px 12px; }
+.promo-item { font-size: 13px; color: var(--ion-color-dark); padding: 6px 0; border-bottom: 1px solid var(--ion-color-light); line-height: 1.5; }
+.promo-item:last-child { border-bottom: none; }
+.store-foot { text-align: center; color: var(--ion-color-medium); font-size: 12px; padding: 0 16px 16px; line-height: 1.8; }
+.input-footer { padding-bottom: env(safe-area-inset-bottom); }
+.input-row { --padding-start: 8px; --padding-end: 8px; }
+.listen-note { display: block; text-align: center; padding: 0 12px 8px; }

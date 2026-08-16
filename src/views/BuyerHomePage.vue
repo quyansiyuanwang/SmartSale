@@ -1,0 +1,125 @@
+<template>
+  <ion-page class="buyer-page">
+    <ion-header translucent>
+      <ion-toolbar color="primary">
+        <ion-title>{{ storeProfile.name }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button router-link="/tabs/home" color="light">返回管理端</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content :fullscreen="true">
+      <div class="buyer-hero">
+        <h2>👋 {{ storeProfile.welcome }}</h2>
+        <ion-chip v-for="tip in tips" :key="tip" outline color="light" @click="quickAsk(tip)">
+          {{ tip }}
+        </ion-chip>
+      </div>
+
+      <div class="chat-area">
+        <div v-for="(m, i) in msgs" :key="i" class="msg" :class="m.role">
+          <div class="bubble">
+            <span v-if="m.role === 'assistant'" class="source-tag">{{ sourceTag(m.source) }}</span>
+            <span class="text" v-html="lineBreak(m.text)"></span>
+          </div>
+        </div>
+        <div v-if="thinking" class="msg assistant">
+          <div class="bubble thinking"><ion-spinner name="dots" /> 智购顾问思考中…</div>
+        </div>
+        <div v-if="!msgs.length && !thinking" class="empty-tip">
+          您可以直接提问，比如「16mm膨胀螺丝在哪」「水龙头怎么安装」「开学文具清单」。
+        </div>
+      </div>
+
+      <ion-card v-if="activePromos.length" class="promo-card">
+        <ion-card-header class="ion-no-padding">
+          <ion-card-title><ion-icon :icon="pricetag" color="danger" /> 今日优惠</ion-card-title>
+        </ion-card-header>
+        <ion-card-content class="ion-no-padding">
+          <div v-for="pr in activePromos" :key="pr.id" class="promo-item">
+            <b>{{ pr.title }}</b> · {{ pr.detail }}
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="store-foot">
+        <div>{{ storeProfile.address }}</div>
+        <div>{{ storeProfile.hours }} · {{ storeProfile.phone }}</div>
+      </div>
+    </ion-content>
+
+    <ion-footer class="input-footer">
+      <ion-toolbar>
+        <ion-item lines="none" class="input-row">
+          <ion-input v-model="input" placeholder="问问智购顾问…" @keyup.enter="send()" />
+          <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : 'primary'" @click="toggleMic">
+            <ion-icon slot="icon-only" :icon="speech.listening ? micOff : mic" />
+          </ion-button>
+          <ion-button shape="round" color="success" :disabled="thinking || !input.trim()" @click="send()">
+            <ion-icon slot="icon-only" :icon="sendIcon" />
+          </ion-button>
+        </ion-item>
+        <ion-note v-if="speech.listening" color="danger" class="listen-note">正在聆听…{{ speech.transcript }}</ion-note>
+      </ion-toolbar>
+    </ion-footer>
+  </ion-page>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent,
+  IonChip, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonIcon, IonFooter, IonItem,
+  IonInput, IonNote, IonSpinner } from '@ionic/vue';
+import { mic, micOff, send as sendIcon, pricetag } from 'ionicons/icons';
+import { storeProfile, promotions } from '@/services/data';
+import { askBuyerQuestion } from '@/services/ai.service';
+import { addQuery } from '@/services/query.service';
+import { useSpeech } from '@/composables/useSpeech';
+
+const tips = ['16mm膨胀螺丝在哪？', '水龙头怎么安装？', '开学文具清单', '100元以内工具箱', '家庭应急药箱'];
+const input = ref('');
+const thinking = ref(false);
+const msgs = ref<Array<{ role: 'user' | 'assistant'; text: string; source?: string }>>([]);
+
+const activePromos = computed(() => promotions.value.filter((p) => p.active));
+
+const speech = useSpeech((text) => {
+  input.value = text;
+  void send();
+});
+
+function quickAsk(tip: string) {
+  input.value = tip;
+  void send();
+}
+
+function toggleMic() {
+  if (speech.listening.value) speech.stop();
+  else speech.start();
+}
+
+async function send() {
+  const q = input.value.trim();
+  if (!q || thinking.value) return;
+  msgs.value.push({ role: 'user', text: q });
+  input.value = '';
+  thinking.value = true;
+  try {
+    const reply = await askBuyerQuestion(q);
+    msgs.value.push({ role: 'assistant', text: reply.text, source: reply.source });
+    await addQuery(q, reply.text, reply.demo);
+  } finally {
+    thinking.value = false;
+  }
+}
+
+function sourceTag(src?: string): string {
+  if (src === 'ai') return 'AI 在线';
+  return '演示模式';
+}
+
+function lineBreak(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
+}
+</script>

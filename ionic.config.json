@@ -1,0 +1,7 @@
+{
+  "name": "_scaffold_tmp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
