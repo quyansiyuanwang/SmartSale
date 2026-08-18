@@ -89,7 +89,7 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIco
   IonList, IonItem, IonLabel, IonBadge } from '@ionic/vue';
 import { storefront, addCircle, chatbubbles, warning, chatbubbleEllipses } from 'ionicons/icons';
 import { storeProfile, queries } from '@/services/data';
-import { todaySummary, lowStock, fmtMoney } from '@/services/report.service';
+import { todaySummary, lowStock } from '@/services/report.service';
 import { todaySales } from '@/services/sale.service';
 
 const today = computed(() => todaySummary());

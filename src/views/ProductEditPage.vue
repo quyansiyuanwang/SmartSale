@@ -82,7 +82,7 @@ import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, Io
   IonButton, IonIcon } from '@ionic/vue';
 import { save as saveIcon } from 'ionicons/icons';
 import { showToast } from '@/composables/useToast';
-import { ProductInput, Product } from '@/types';
+import { ProductInput } from '@/types';
 import { findProduct, createProduct, updateProduct, deleteProduct } from '@/services/product.service';
 
 const route = useRoute();

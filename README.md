@@ -40,15 +40,47 @@ npx cap sync
 - 在 Chrome / Edge 中打开站点，地址栏出现安装图标即可安装到桌面。
 - 买家端以 PWA 形式替代原方案文档中的微信小程序（Capacitor 不支持小程序，详见「已知限制」）。
 
-### Capacitor（Android 后续）
+### Capacitor 原生工程
 
 ```bash
-# 本机安装 Android SDK 后执行（当前 MVP 未执行原生构建）
-npx cap add android
+# Web 构建并同步 Android / iOS 原生工程
+npm run android:sync
+npm run ios:sync
+
+# 安装 Android SDK 后打开 Android Studio
 npx cap open android
 ```
 
 `capacitor.config.ts` 已配置 `appId=com.smartsale.app`、`appName=智售引擎`。
+
+### 多平台 CI 与发布
+
+项目通过 GitHub Actions 构建 Web/PWA、Android 和 iOS 包体：
+
+- 任意分支 `push`：运行 lint、单元测试和生产构建，并保留 Web/PWA zip、Android debug APK、iOS 未签名 archive 制品 30 天。
+- Pull Request：只运行质量检查，不重复生成下载制品。
+- `workflow_dispatch`：从 Actions 页面手动触发，与分支构建生成相同的测试制品。
+- 正式发布：提交 `package.json` 版本后，创建同版本 tag，例如版本为 `1.2.3` 时执行 `git tag v1.2.3` 并推送。tag 必须匹配 `vX.Y.Z`。
+
+测试人员可在对应 Actions run 的 **Artifacts** 区域下载包体。正式 tag 会创建 GitHub Release，包含 Web/PWA zip、Android APK/AAB、iOS IPA 与 `SHA256SUMS.txt` 校验文件。
+
+#### 正式发布签名配置
+
+正式 tag 不会发布未签名移动端包。请在仓库级 GitHub Actions Secrets 配置以下值；工作流中的 `release` Environment 仅用于保护正式 Release 的审批权限。
+
+| 平台 | Secret | 内容 |
+| --- | --- | --- |
+| Android | `ANDROID_KEYSTORE_BASE64` | Base64 编码的 `.jks` / `.keystore` 文件 |
+| Android | `ANDROID_KEYSTORE_PASSWORD` | keystore 密码 |
+| Android | `ANDROID_KEY_ALIAS` | key alias |
+| Android | `ANDROID_KEY_PASSWORD` | key 密码 |
+| iOS | `APPLE_CERTIFICATE_BASE64` | Base64 编码的 distribution `.p12` 证书 |
+| iOS | `APPLE_CERTIFICATE_PASSWORD` | `.p12` 密码 |
+| iOS | `APPLE_PROVISIONING_PROFILE_BASE64` | Base64 编码的 Ad Hoc provisioning profile |
+| iOS | `APPLE_TEAM_ID` | Apple Developer Team ID |
+| iOS | `IOS_KEYCHAIN_PASSWORD` | CI 临时 keychain 的随机密码 |
+
+任一 Secret 缺失时，tag 工作流会在创建 Release 前失败。非 tag 的 iOS 制品是未签名 `.xcarchive.zip`，不能直接安装到真机；正式 iOS IPA 使用 Ad Hoc profile，测试设备必须已登记在该 profile 中。
 
 ---
 
@@ -79,6 +111,8 @@ smart-sale/
 │  ├─ types/index.ts          # 核心类型定义
 │  └─ views/                  # 页面（商家 5 Tab + 买家）
 ├─ tests/                     # e2e 模板（预留）
+├─ android/                   # Capacitor Android 原生工程
+├─ ios/                       # Capacitor iOS 原生工程
 ├─ capacitor.config.ts
 └─ vite.config.ts             # Vite + PWA + Vitest 配置
 ```
@@ -139,7 +173,7 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 - 单店铺、无登录 / 权限体系；多员工、会员、积分等不在本次范围。
 - 数据仅存本地单机（`@capacitor/preferences`），不引入 SQLite / 后端；数据层为仓储式接口，后续可平滑替换。
 - 买家端以 Web/PWA 替代微信小程序（Capacitor 不支持小程序）。
-- Android / iOS 原生构建未执行：本机无 Android SDK，iOS 需 macOS；Web 产物与 Capacitor 配置已就绪，安装 SDK 后 `npx cap add android` 即可继续。
+- Android / iOS 原生包由 GitHub Actions 构建：Android 使用 Ubuntu runner，iOS 使用 macOS runner；本地 iOS 构建仍需 macOS 与 Xcode。
 
 ## 文档
 

@@ -1,0 +1,329 @@
+name: Build and release
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-sale-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  preflight:
+    name: Release preflight
+    needs: quality
+    runs-on: ubuntu-24.04
+    outputs:
+      is_release: ${{ steps.release.outputs.is_release }}
+      artifact_suffix: ${{ steps.release.outputs.artifact_suffix }}
+      app_version: ${{ steps.release.outputs.app_version }}
+      version_code: ${{ steps.release.outputs.version_code }}
+      android_artifact_kind: ${{ steps.release.outputs.android_artifact_kind }}
+      ios_artifact_kind: ${{ steps.release.outputs.ios_artifact_kind }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: release
+        name: Validate release metadata and signing material
+        shell: bash
+        env:
+          IS_TAG_RELEASE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          package_version="$(node --input-type=module -e "import pkg from './package.json' with { type: 'json' }; console.log(pkg.version)")"
+          short_sha="${GITHUB_SHA::7}"
+
+          if [[ "$IS_TAG_RELEASE" == "true" ]]; then
+            tag="${GITHUB_REF_NAME}"
+            if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "Release tags must use the vX.Y.Z format; received $tag." >&2
+              exit 1
+            fi
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+            tag_version="${tag#v}"
+            if [[ "$tag_version" != "$package_version" ]]; then
+              echo "Tag version $tag_version does not match package.json version $package_version." >&2
+              exit 1
+            fi
+
+            missing=()
+            for secret_name in \
+              ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD \
+              APPLE_CERTIFICATE_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_PROVISIONING_PROFILE_BASE64 \
+              APPLE_TEAM_ID IOS_KEYCHAIN_PASSWORD; do
+              if [[ -z "${!secret_name}" ]]; then
+                missing+=("$secret_name")
+              fi
+            done
+            if (( ${#missing[@]} > 0 )); then
+              echo "Refusing to create an incomplete release. Missing secrets: ${missing[*]}" >&2
+              exit 1
+            fi
+
+            version_code=$((10#$major * 1000000 + 10#$minor * 1000 + 10#$patch))
+            {
+              echo 'is_release=true'
+              echo "artifact_suffix=$tag"
+              echo "app_version=$tag_version"
+              echo "version_code=$version_code"
+              echo 'android_artifact_kind=release'
+              echo 'ios_artifact_kind=ipa'
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo 'is_release=false'
+              echo "artifact_suffix=$short_sha"
+              echo "app_version=$package_version+$short_sha"
+              echo 'version_code=1'
+              echo 'android_artifact_kind=debug'
+              echo 'ios_artifact_kind=unsigned'
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  web:
+    name: Package Web/PWA
+    needs: preflight
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Create Web/PWA archive
+        shell: bash
+        env:
+          ARTIFACT_SUFFIX: ${{ needs.preflight.outputs.artifact_suffix }}
+        run: |
+          set -euo pipefail
+          mkdir package
+          archive="smart-sale-web-pwa-${ARTIFACT_SUFFIX}.zip"
+          (cd dist && zip -r "../package/$archive" .)
+          (cd package && sha256sum "$archive" > "$archive.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smart-sale-web-pwa-${{ needs.preflight.outputs.artifact_suffix }}
+          path: package/
+          if-no-files-found: error
+          retention-days: ${{ needs.preflight.outputs.is_release == 'true' && 1 || 30 }}
+
+  android:
+    name: Package Android
+    needs: preflight
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run android:sync
+      - name: Build Android package
+        shell: bash
+        env:
+          IS_RELEASE: ${{ needs.preflight.outputs.is_release }}
+          ARTIFACT_SUFFIX: ${{ needs.preflight.outputs.artifact_suffix }}
+          APP_VERSION: ${{ needs.preflight.outputs.app_version }}
+          VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir package
+          cd android
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            keystore="$RUNNER_TEMP/smart-sale-release.jks"
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            ./gradlew assembleRelease bundleRelease \
+              -PSMART_SALE_VERSION_NAME="$APP_VERSION" \
+              -PSMART_SALE_VERSION_CODE="$VERSION_CODE" \
+              -PSMART_SALE_STORE_FILE="$keystore" \
+              -PSMART_SALE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+              -PSMART_SALE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+              -PSMART_SALE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+            cp app/build/outputs/apk/release/app-release.apk "../package/smart-sale-android-${ARTIFACT_SUFFIX}.apk"
+            cp app/build/outputs/bundle/release/app-release.aab "../package/smart-sale-android-${ARTIFACT_SUFFIX}.aab"
+          else
+            ./gradlew assembleDebug \
+              -PSMART_SALE_VERSION_NAME="$APP_VERSION" \
+              -PSMART_SALE_VERSION_CODE="$VERSION_CODE"
+            cp app/build/outputs/apk/debug/app-debug.apk "../package/smart-sale-android-debug-${ARTIFACT_SUFFIX}.apk"
+          fi
+          (cd ../package && sha256sum * > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smart-sale-android-${{ needs.preflight.outputs.android_artifact_kind }}-${{ needs.preflight.outputs.artifact_suffix }}
+          path: package/
+          if-no-files-found: error
+          retention-days: ${{ needs.preflight.outputs.is_release == 'true' && 1 || 30 }}
+
+  ios:
+    name: Package iOS
+    needs: preflight
+    if: github.event_name != 'pull_request'
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run ios:sync
+      - name: Build iOS package
+        shell: bash
+        env:
+          IS_RELEASE: ${{ needs.preflight.outputs.is_release }}
+          ARTIFACT_SUFFIX: ${{ needs.preflight.outputs.artifact_suffix }}
+          APP_VERSION: ${{ needs.preflight.outputs.app_version }}
+          VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir package
+          archive_path="$RUNNER_TEMP/SmartSale.xcarchive"
+          common_args=(
+            -project App.xcodeproj
+            -scheme App
+            -destination 'generic/platform=iOS'
+            -archivePath "$archive_path"
+            MARKETING_VERSION="$APP_VERSION"
+            CURRENT_PROJECT_VERSION="$VERSION_CODE"
+          )
+          cd ios/App
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            keychain_path="$RUNNER_TEMP/smart-sale.keychain-db"
+            certificate_path="$RUNNER_TEMP/distribution.p12"
+            profile_path="$HOME/Library/MobileDevice/Provisioning Profiles/smart-sale.mobileprovision"
+            mkdir -p "$(dirname "$profile_path")"
+            printf '%s' "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+            printf '%s' "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
+            security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" "$keychain_path"
+            security set-keychain-settings -lut 21600 "$keychain_path"
+            security unlock-keychain -p "$IOS_KEYCHAIN_PASSWORD" "$keychain_path"
+            security import "$certificate_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+            security list-keychain -d user -s "$keychain_path" login.keychain-db
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$IOS_KEYCHAIN_PASSWORD" "$keychain_path"
+            profile_uuid="$(security cms -D -i "$profile_path" | plutil -extract UUID raw -)"
+            xcodebuild archive "${common_args[@]}" \
+              -configuration Release \
+              DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+              CODE_SIGN_STYLE=Manual \
+              PROVISIONING_PROFILE_SPECIFIER="$profile_uuid"
+            cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>ad-hoc</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.smartsale.app</key><string>$profile_uuid</string>
+            </dict>
+          </dict></plist>
+          EOF
+            xcodebuild -exportArchive \
+              -archivePath "$archive_path" \
+              -exportPath "$RUNNER_TEMP/SmartSale-export" \
+              -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+            cp "$RUNNER_TEMP/SmartSale-export/App.ipa" "../../package/smart-sale-ios-${ARTIFACT_SUFFIX}.ipa"
+            security delete-keychain "$keychain_path"
+          else
+            xcodebuild archive "${common_args[@]}" \
+              -configuration Debug \
+              CODE_SIGNING_ALLOWED=NO
+            ditto -c -k --sequesterRsrc --keepParent "$archive_path" "../../package/smart-sale-ios-unsigned-${ARTIFACT_SUFFIX}.xcarchive.zip"
+          fi
+          (cd ../../package && shasum -a 256 * > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smart-sale-ios-${{ needs.preflight.outputs.ios_artifact_kind }}-${{ needs.preflight.outputs.artifact_suffix }}
+          path: package/
+          if-no-files-found: error
+          retention-days: ${{ needs.preflight.outputs.is_release == 'true' && 1 || 30 }}
+
+  release:
+    name: Publish GitHub Release
+    needs:
+      - preflight
+      - web
+      - android
+      - ios
+    if: needs.preflight.outputs.is_release == 'true'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: smart-sale-*-${{ needs.preflight.outputs.artifact_suffix }}
+          path: release
+          merge-multiple: true
+      - name: Create unified checksum manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release
+          rm -f SHA256SUMS.txt *.sha256
+          sha256sum *.zip *.apk *.aab *.ipa > SHA256SUMS.txt
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "Smart Sale $GITHUB_REF_NAME" \
+            --generate-notes

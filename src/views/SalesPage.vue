@@ -70,7 +70,7 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonSearchbar, IonContent, Ion
   IonButton, IonIcon, IonNote } from '@ionic/vue';
 import { checkmark } from 'ionicons/icons';
 import { Product } from '@/types';
-import { listProducts, findProduct } from '@/services/product.service';
+import { listProducts } from '@/services/product.service';
 import { recordSale, todaySales } from '@/services/sale.service';
 import { fmtMoney } from '@/services/report.service';
 import { showToast } from '@/composables/useToast';

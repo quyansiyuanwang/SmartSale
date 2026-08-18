@@ -1,0 +1,11 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
+const packageFile = fileURLToPath(new URL('../ios/App/CapApp-SPM/Package.swift', import.meta.url));
+const source = await readFile(packageFile, 'utf8');
+const normalized = source.replaceAll('\\', '/');
+
+if (normalized !== source) {
+  await writeFile(packageFile, normalized, 'utf8');
+  console.log('Normalized iOS Swift Package local paths for cross-platform builds.');
+}

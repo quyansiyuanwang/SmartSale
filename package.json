@@ -10,13 +10,17 @@
     "test:e2e": "cypress run",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cap:sync": "npm run build && cap sync",
+    "android:sync": "npm run build && cap sync android",
+    "ios:sync": "npm run build && cap sync ios && node scripts/normalize-ios-package.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.0",
+    "@capacitor/android": "8.5.0",
     "@capacitor/app": "8.1.1",
     "@capacitor/core": "8.5.0",
     "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.5.0",
     "@capacitor/keyboard": "8.0.5",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "8.0.3",
