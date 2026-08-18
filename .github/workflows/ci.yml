@@ -235,7 +235,7 @@ jobs:
           mkdir package
           archive_path="$RUNNER_TEMP/SmartSale.xcarchive"
           common_args=(
-            -project App.xcodeproj
+            -workspace App.xcworkspace
             -scheme App
             -destination 'generic/platform=iOS'
             -archivePath "$archive_path"
