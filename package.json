@@ -16,11 +16,11 @@
     "ios:sync": "npm run build && cap sync ios && node scripts/normalize-ios-package.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "8.5.0",
+    "@capacitor/android": "8.0.0",
     "@capacitor/app": "8.1.1",
-    "@capacitor/core": "8.5.0",
+    "@capacitor/core": "8.0.0",
     "@capacitor/haptics": "8.0.2",
-    "@capacitor/ios": "8.5.0",
+    "@capacitor/ios": "8.0.0",
     "@capacitor/keyboard": "8.0.5",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "8.0.3",
@@ -31,7 +31,7 @@
     "vue-router": "^4.2.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.5.0",
+    "@capacitor/cli": "8.0.0",
     "@vitejs/plugin-legacy": "^5.0.0",
     "@vitejs/plugin-vue": "^4.0.0",
     "@vue/eslint-config-typescript": "^12.0.0",

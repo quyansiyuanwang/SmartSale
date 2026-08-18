@@ -178,6 +178,7 @@ jobs:
           set -euo pipefail
           mkdir package
           cd android
+          chmod +x ./gradlew
           if [[ "$IS_RELEASE" == "true" ]]; then
             keystore="$RUNNER_TEMP/smart-sale-release.jks"
             printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
