@@ -15,7 +15,7 @@
     <ion-content :fullscreen="true" class="ion-padding">
       <div class="greet-card">
         <div class="greet-title">智店管家</div>
-        <div class="greet-sub">{{ todayText }} · {{ storeProfile.hours }}</div>
+        <div class="greet-sub">{{ todayText() }} · {{ storeProfile.hours }}</div>
       </div>
 
       <ion-grid class="stat-grid">
