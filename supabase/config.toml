@@ -1,0 +1,16 @@
+project_id = "smart-sale"
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.knowledge-search]
+verify_jwt = false
+
+[functions.public-store]
+verify_jwt = false
+
+[functions.ai-command]
+verify_jwt = true
+
+[functions.knowledge-ingest]
+verify_jwt = true

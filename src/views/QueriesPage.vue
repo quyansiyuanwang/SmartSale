@@ -5,7 +5,7 @@
         <ion-buttons slot="start"><ion-back-button default-href="/tabs/home" /></ion-buttons>
         <ion-title>顾客咨询</ion-title>
         <ion-buttons slot="end">
-          <ion-button color="danger" @click="clearAll">清空</ion-button>
+          <ion-button v-if="demoMode" color="danger" @click="clearAll">清空</ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -21,6 +21,9 @@
               </ion-badge>
             </div>
             <p class="q-answer">{{ q.answer }}</p>
+            <p v-if="q.error" class="q-answer ion-color-danger">服务错误：{{ q.error }}</p>
+            <p v-if="q.provider || q.model || q.latencyMs" class="q-time">{{ q.provider || 'AI' }}{{ q.model ? ` · ${q.model}` : '' }}{{ q.latencyMs ? ` · ${q.latencyMs}ms` : '' }}</p>
+            <p v-if="q.sourceDocumentIds?.length" class="q-time">来源文档：{{ q.sourceDocumentIds.length }} 份</p>
             <p class="q-time">{{ fullText(q.createdAt) }}</p>
           </ion-label>
         </ion-item>
@@ -39,8 +42,10 @@ import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, Io
   IonContent, IonList, IonItem, IonLabel, IonBadge } from '@ionic/vue';
 import { listQueries, clearQueries } from '@/services/query.service';
 import { showToast } from '@/composables/useToast';
+import { isDemoMode } from '@/lib/supabase';
 
 const list = ref(listQueries());
+const demoMode = isDemoMode;
 
 async function clearAll() {
   await clearQueries();

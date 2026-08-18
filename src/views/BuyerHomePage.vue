@@ -53,14 +53,15 @@
       <ion-toolbar>
         <ion-item lines="none" class="input-row">
           <ion-input v-model="input" placeholder="问问智购顾问…" @keyup.enter="send()" />
-          <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : 'primary'" @click="toggleMic">
-            <ion-icon slot="icon-only" :icon="speech.listening ? micOff : mic" />
+          <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : speech.isError ? 'warning' : 'primary'" @click="toggleMic">
+            <ion-icon slot="icon-only" :icon="speech.listening ? stop : speech.isError ? refresh : mic" />
           </ion-button>
           <ion-button shape="round" color="success" :disabled="thinking || !input.trim()" @click="send()">
             <ion-icon slot="icon-only" :icon="sendIcon" />
           </ion-button>
         </ion-item>
-        <ion-note v-if="speech.listening" color="danger" class="listen-note">正在聆听…{{ speech.transcript }}</ion-note>
+        <ion-note v-if="speech.listening" color="danger" class="listen-note">正在聆听，点击停止取消…{{ speech.transcript }}</ion-note>
+        <ion-note v-else-if="speech.error" color="danger" class="listen-note">{{ speech.error }}，点击麦克风重试</ion-note>
       </ion-toolbar>
     </ion-footer>
   </ion-page>
@@ -68,18 +69,22 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent,
   IonChip, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonIcon, IonFooter, IonItem,
   IonInput, IonNote, IonSpinner } from '@ionic/vue';
-import { mic, micOff, send as sendIcon, pricetag } from 'ionicons/icons';
-import { storeProfile, promotions } from '@/services/data';
+import { mic, stop, refresh, send as sendIcon, pricetag } from 'ionicons/icons';
+import { storeProfile, promotions, loadPublicStore } from '@/services/data';
 import { askBuyerQuestion } from '@/services/ai.service';
 import { addQuery } from '@/services/query.service';
 import { useSpeech } from '@/composables/useSpeech';
 
 const tips = ['16mm膨胀螺丝在哪？', '水龙头怎么安装？', '开学文具清单', '100元以内工具箱', '家庭应急药箱'];
+const route = useRoute();
 const input = ref('');
 const thinking = ref(false);
+let chatController: AbortController | null = null;
 const msgs = ref<Array<{ role: 'user' | 'assistant'; text: string; source?: string }>>([]);
 
 const activePromos = computed(() => promotions.value.filter((p) => p.active));
@@ -96,7 +101,7 @@ function quickAsk(tip: string) {
 
 function toggleMic() {
   if (speech.listening.value) speech.stop();
-  else speech.start();
+  else { speech.reset(); speech.start(); }
 }
 
 async function send() {
@@ -105,11 +110,15 @@ async function send() {
   msgs.value.push({ role: 'user', text: q });
   input.value = '';
   thinking.value = true;
+  chatController = new AbortController();
   try {
-    const reply = await askBuyerQuestion(q);
+    const reply = await askBuyerQuestion(q, chatController.signal);
     msgs.value.push({ role: 'assistant', text: reply.text, source: reply.source });
     await addQuery(q, reply.text, reply.demo);
+  } catch (error) {
+    if ((error as DOMException)?.name !== 'AbortError') msgs.value.push({ role: 'assistant', text: error instanceof Error ? error.message : 'AI 服务暂不可用', source: 'error' });
   } finally {
+    chatController = null;
     thinking.value = false;
   }
 }
@@ -122,4 +131,9 @@ function sourceTag(src?: string): string {
 function lineBreak(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
 }
+
+onMounted(async () => {
+  const slug = typeof route.params.slug === 'string' ? route.params.slug : new URLSearchParams(window.location.search).get('store');
+  if (slug) { try { await loadPublicStore(slug); } catch (error) { msgs.value.push({ role: 'assistant', text: error instanceof Error ? error.message : '门店信息暂不可用', source: 'error' }); } }
+});
 </script>

@@ -42,18 +42,18 @@
           <ion-icon slot="start" :icon="sparkles" />
           <ion-label>AI 模式</ion-label>
           <ion-badge :color="hasKey ? 'success' : 'warning'" slot="end">
-            {{ hasKey ? 'AI 在线' : '演示模式' }}
+            {{ hasKey ? '服务端配置' : '未配置' }}
           </ion-badge>
         </ion-item>
         <ion-item>
           <ion-icon slot="start" :icon="layers" />
           <ion-label>数据存储</ion-label>
-          <ion-note slot="end">本地（手机/浏览器）</ion-note>
+          <ion-note slot="end">{{ productionStorage ? 'Supabase 多门店' : '本地演示数据' }}</ion-note>
         </ion-item>
       </ion-list>
 
       <div class="ion-padding">
-        <ion-button expand="block" fill="outline" color="danger" @click="confirmReset">
+        <ion-button v-if="!productionStorage" expand="block" fill="outline" color="danger" @click="confirmReset">
           <ion-icon slot="start" :icon="refresh" />重置演示数据
         </ion-button>
         <p class="center-note">智售引擎 MVP · Ionic + Capacitor + Vue 3 · AI：DeepSeek（可配置，无 Key 自动降级）</p>
@@ -70,9 +70,11 @@ import { storefront, qrCode, chevronForward, warning, chatbubbleEllipses, settin
 import { storeProfile } from '@/services/data';
 import { resetAll } from '@/services/data';
 import { hasApiKey } from '@/services/store.service';
+import { isDemoMode } from '@/lib/supabase';
 import { showToast } from '@/composables/useToast';
 
 const hasKey = computed(() => hasApiKey());
+const productionStorage = !isDemoMode;
 
 async function confirmReset() {
   const alert = await alertController.create({

@@ -12,7 +12,8 @@ export const defaultLlm: LlmConfig = {
   apiKey: '',
   baseUrl: 'https://api.deepseek.com',
   model: 'deepseek-chat',
-  timeoutMs: 30000
+  timeoutMs: 30000,
+  provider: 'deepseek'
 };
 
 export function seedProducts(): Product[] {

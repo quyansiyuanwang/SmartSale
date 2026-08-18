@@ -1,86 +1,27 @@
-import { ref, onUnmounted } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 
-interface SpeechRecognitionLike {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((event: any) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: any) => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
+type SpeechState = 'idle' | 'starting' | 'listening' | 'stopping' | 'error';
+interface SpeechRecognitionLike { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: any) => void) | null; onend: (() => void) | null; onerror: ((event: any) => void) | null; start(): void; stop(): void; abort(): void; }
 
-/**
- * Web Speech API 封装（Chrome / Edge 可用，iOS Safari 不支持时 supported=false）。
- * 识别结束后通过 onFinal 回调返回最终文本。
- */
+/** Web Speech API state machine. `stop` means cancel; only natural completion invokes onFinal. */
 export function useSpeech(onFinal?: (text: string) => void) {
-  const supported =
-    typeof window !== 'undefined' &&
-    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-  const listening = ref(false);
-  const transcript = ref('');
-  let rec: SpeechRecognitionLike | null = null;
-  let stoppedByUser = false;
-
-  function getRec(): SpeechRecognitionLike | null {
-    if (rec) return rec;
-    const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!Ctor) return null;
-    const r = new Ctor() as SpeechRecognitionLike;
-    rec = r;
-    r.lang = 'zh-CN';
-    r.continuous = false;
-    r.interimResults = true;
-    r.onresult = (e: any) => {
-      let t = '';
-      const results: any[] = e.results || [];
-      for (let i = 0; i < results.length; i++) {
-        const seg = results[i];
-        if (seg && seg.isFinal) t += (seg[0] && seg[0].transcript) || '';
-      }
-      if (t) transcript.value = t;
-    };
-    r.onend = () => {
-      listening.value = false;
-      const t = transcript.value.trim();
-      if (t && !stoppedByUser && onFinal) onFinal(t);
-      stoppedByUser = false;
-    };
-    r.onerror = () => {
-      listening.value = false;
-      stoppedByUser = false;
-    };
-    return r;
-  }
+  const supported = typeof window !== 'undefined' && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const state = ref<SpeechState>('idle'); const transcript = ref(''); const error = ref<string | null>(null);
+  const listening = computed(() => state.value === 'starting' || state.value === 'listening' || state.value === 'stopping');
+  const isError = computed(() => state.value === 'error');
+  let recognition: SpeechRecognitionLike | null = null; let activeToken = 0; let cancelledToken = 0;
 
   function start() {
-    const r = getRec();
-    if (!r) return;
-    stoppedByUser = false;
-    transcript.value = '';
-    try {
-      r.start();
-      listening.value = true;
-    } catch {
-      listening.value = false;
-    }
+    if (!supported || listening.value) return; const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition; if (!Ctor) return;
+    const token = ++activeToken; transcript.value = ''; error.value = null; state.value = 'starting';
+    const rec = new Ctor() as SpeechRecognitionLike; recognition = rec; rec.lang = 'zh-CN'; rec.continuous = false; rec.interimResults = true;
+    rec.onresult = (event: any) => { if (token !== activeToken || token === cancelledToken) return; let finalText = ''; let interimText = ''; for (let index = event.resultIndex ?? 0; index < (event.results?.length ?? 0); index += 1) { const result = event.results[index]; const text = result?.[0]?.transcript ?? ''; if (result?.isFinal) finalText += text; else interimText += text; } transcript.value = (finalText || interimText).trim(); state.value = 'listening'; };
+    rec.onerror = (event: any) => { if (token !== activeToken || token === cancelledToken || event?.error === 'aborted') return; error.value = event?.error === 'not-allowed' ? '麦克风权限未开启' : '语音识别失败，请重试'; state.value = 'error'; };
+    rec.onend = () => { if (token !== activeToken) return; recognition = null; const text = transcript.value.trim(); const naturallyCompleted = token !== cancelledToken && state.value !== 'error'; if (naturallyCompleted) state.value = 'idle'; if (naturallyCompleted && text) onFinal?.(text); };
+    try { rec.start(); state.value = 'listening'; } catch { if (token === activeToken) { error.value = '无法开始语音识别，请重试'; state.value = 'error'; } }
   }
-
-  function stop() {
-    stoppedByUser = true;
-    rec?.stop();
-  }
-
-  function reset() {
-    transcript.value = '';
-  }
-
-  onUnmounted(() => {
-    rec?.abort?.();
-  });
-
-  return { supported, listening, transcript, start, stop, reset };
+  function stop() { if (!recognition || !listening.value) { state.value = 'idle'; return; } cancelledToken = activeToken; state.value = 'idle'; transcript.value = ''; recognition.abort(); recognition = null; }
+  function reset() { transcript.value = ''; error.value = null; if (state.value === 'error') state.value = 'idle'; }
+  onUnmounted(() => { cancelledToken = activeToken; activeToken += 1; recognition?.abort(); recognition = null; });
+  return { supported, state, listening, isError, transcript, error, start, stop, reset };
 }

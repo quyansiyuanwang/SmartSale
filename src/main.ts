@@ -30,12 +30,13 @@ registerSW({ immediate: true });
 
 /* Load local data before mounting */
 import { loadAll } from './services/data';
+import { useAuth } from './composables/useAuth';
 
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
 
-loadAll().finally(() => {
+useAuth().initializeAuth().then(loadAll).finally(() => {
   router.isReady().then(() => {
     app.mount('#app');
   });

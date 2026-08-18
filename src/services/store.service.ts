@@ -1,5 +1,6 @@
 import { storeProfile, llmConfig, persistProfile, persistLlm } from './data';
 import { StoreProfile, LlmConfig } from '@/types';
+import { isDemoMode } from '@/lib/supabase';
 
 export async function saveProfile(patch: Partial<StoreProfile>): Promise<StoreProfile> {
   storeProfile.value = { ...storeProfile.value, ...patch };
@@ -14,5 +15,5 @@ export async function saveLlmConfig(patch: Partial<LlmConfig>): Promise<LlmConfi
 }
 
 export function hasApiKey(): boolean {
-  return !!llmConfig.value.apiKey.trim();
+  return !isDemoMode && !!llmConfig.value.provider;
 }

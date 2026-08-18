@@ -1,4 +1,5 @@
-import { products, persistProducts } from './data';
+import { products, persistProducts, deleteRemoteProduct, saveProduct } from './data';
+import { isDemoMode } from '@/lib/supabase';
 import { Product, ProductInput } from '@/types';
 import { uid, nowISO } from './storage.service';
 
@@ -28,6 +29,11 @@ export function listProducts(search = ''): Product[] {
 
 export async function createProduct(input: ProductInput): Promise<Product> {
   const p: Product = { ...input, id: uid('p'), createdAt: nowISO(), updatedAt: nowISO() };
+  if (!isDemoMode) {
+    const saved = await saveProduct(p, true);
+    products.value.unshift(saved);
+    return saved;
+  }
   products.value.unshift(p);
   await persistProducts();
   return p;
@@ -37,13 +43,14 @@ export async function updateProduct(id: string, patch: Partial<ProductInput>): P
   const p = products.value.find((x) => x.id === id);
   if (!p) return undefined;
   Object.assign(p, patch, { updatedAt: nowISO() });
-  await persistProducts();
+  if (isDemoMode) await persistProducts(); else await saveProduct(p);
   return p;
 }
 
 export async function deleteProduct(id: string): Promise<void> {
   products.value = products.value.filter((p) => p.id !== id);
-  await persistProducts();
+  await deleteRemoteProduct(id);
+  if (isDemoMode) await persistProducts();
 }
 
 export async function adjustStock(id: string, delta: number): Promise<Product | undefined> {
@@ -51,6 +58,6 @@ export async function adjustStock(id: string, delta: number): Promise<Product | 
   if (!p) return undefined;
   p.stock = Math.max(0, p.stock + delta);
   p.updatedAt = nowISO();
-  await persistProducts();
+  if (isDemoMode) await persistProducts(); else await saveProduct(p);
   return p;
 }

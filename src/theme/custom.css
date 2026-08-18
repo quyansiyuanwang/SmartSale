@@ -130,3 +130,37 @@
 .input-footer { padding-bottom: env(safe-area-inset-bottom); }
 .input-row { --padding-start: 8px; --padding-end: 8px; }
 .listen-note { display: block; text-align: center; padding: 0 12px 8px; }
+
+/* ============ 管理端响应式壳层 ============ */
+.merchant-sidebar, .merchant-topbar { display: none; }
+@media (min-width: 1024px) {
+  .merchant-sidebar { display: flex; position: fixed; inset: 0 auto 0 0; z-index: 20; width: 216px; flex-direction: column; padding: 18px 12px; background: #17212b; color: #e8eef3; }
+  .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-weight: 700; letter-spacing: .02em; }
+  .brand-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: #f2b84b; color: #17212b; font-weight: 800; }
+  .sidebar-link { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; color: #b5c1cb; text-decoration: none; border-radius: 6px; font-size: 14px; }
+  .sidebar-link:hover, .sidebar-link.router-link-active { background: #263746; color: #fff; }
+  .sidebar-link ion-icon { font-size: 18px; }
+  .sidebar-foot { margin-top: auto; padding: 12px; color: #81909d; font-size: 11px; }
+  .merchant-topbar { display: flex; position: fixed; top: 0; right: 0; left: 216px; z-index: 15; height: 52px; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(255,255,255,.96); border-bottom: 1px solid #e4e9ed; color: #27333d; }
+  .merchant-topbar span { color: #81909d; font-size: 12px; }
+  ion-tabs { margin-left: 216px; padding-top: 52px; }
+  ion-tab-bar { display: none; }
+  ion-router-outlet { max-width: 1440px; margin: 0 auto; }
+  ion-content.ion-padding { --padding-start: 24px; --padding-end: 24px; --padding-top: 20px; }
+  ion-card { margin: 0 0 12px; border: 1px solid #e4e9ed; box-shadow: none; border-radius: 6px; }
+  ion-card-header { padding: 12px 16px 6px; } ion-card-content { padding: 8px 16px 14px; }
+  ion-list { padding-top: 0; padding-bottom: 0; } ion-item { --min-height: 48px; --padding-start: 12px; --inner-padding-end: 12px; }
+  .greet-card, .profile-card, .buyer-hero { border-radius: 6px; }
+  .greet-card { padding: 14px 18px; margin-bottom: 10px; } .greet-title { font-size: 18px; }
+  .stat-card { border-radius: 6px; padding: 11px 8px; } .stat-num { font-size: 18px; }
+  .section-title { margin-top: 10px; } .weekly-card { border-radius: 6px; }
+}
+@media (max-width: 767px) {
+  .merchant-sidebar, .merchant-topbar { display: none; }
+  .merchant-shell ion-tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+  ion-content { --padding-bottom: 14px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  ion-tab-bar { --background: #fff; }
+  ion-content.ion-padding { --padding-start: 18px; --padding-end: 18px; }
+}

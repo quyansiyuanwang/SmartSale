@@ -54,14 +54,15 @@
         <ion-card-content>
           <div class="cmd-row">
             <ion-input v-model="cmdText" placeholder="输入或按住麦克风说话" class="cmd-input" @keyup.enter="runCommand" />
-            <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : 'primary'" @click="toggleMic">
-              <ion-icon slot="icon-only" :icon="speech.listening ? micOff : mic" />
+            <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : speech.isError ? 'warning' : 'primary'" @click="toggleMic">
+              <ion-icon slot="icon-only" :icon="speech.listening ? stop : speech.isError ? refresh : mic" />
             </ion-button>
             <ion-button shape="round" color="success" @click="runCommand">
               <ion-icon slot="icon-only" :icon="send" />
             </ion-button>
           </div>
-          <ion-note v-if="speech.listening" class="listening-note">正在聆听…（{{ speech.transcript }}）</ion-note>
+          <ion-note v-if="speech.listening" class="listening-note">正在聆听，点击停止取消…（{{ speech.transcript }}）</ion-note>
+          <ion-note v-else-if="speech.error" color="danger" class="listening-note">{{ speech.error }}</ion-note>
           <div v-if="cmdResult" class="cmd-result">
             <ion-icon :icon="cmdResult.source === 'command' ? terminal : bulb" />
             <div>
@@ -81,7 +82,7 @@ import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, IonCardHeader,
   IonCardTitle, IonCardSubtitle, IonCardContent, IonGrid, IonRow, IonCol, IonList, IonItem,
   IonLabel, IonBadge, IonInput, IonButton, IonIcon, IonNote } from '@ionic/vue';
-import { mic, micOff, send, terminal, bulb } from 'ionicons/icons';
+import { mic, stop, refresh, send, terminal, bulb } from 'ionicons/icons';
 import { weeklyReport, fmtMoney } from '@/services/report.service';
 import { detectCommand, CommandResult } from '@/services/ai.service';
 import { useSpeech } from '@/composables/useSpeech';
@@ -105,7 +106,7 @@ const speech = useSpeech((text) => {
 
 function toggleMic() {
   if (speech.listening.value) speech.stop();
-  else speech.start();
+  else { speech.reset(); speech.start(); }
 }
 
 async function runCommand() {

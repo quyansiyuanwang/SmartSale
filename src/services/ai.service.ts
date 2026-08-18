@@ -1,8 +1,9 @@
-import { products, promotions, storeProfile, llmConfig } from './data';
+import { products, promotions } from './data';
 import { Product, AiReply } from '@/types';
 import { findProductByName, updateProduct } from './product.service';
 import { topProducts, slowMoving, fmtMoney } from './report.service';
-import { hasApiKey } from './store.service';
+import { isDemoMode, supabase } from '@/lib/supabase';
+import { useAuth } from '@/composables/useAuth';
 
 interface SceneDef {
   keywords: RegExp;
@@ -82,78 +83,23 @@ function activePromotions(): string {
     .join('；');
 }
 
-function systemPrompt(): string {
-  const sp = storeProfile.value;
-  return (
-    `你是「智购顾问」，${sp.name}（${sp.address}，营业时间 ${sp.hours}）的 AI 导购员，通过网页/扫码为到店顾客服务。\n` +
-    `回答要求：\n` +
-    `1. 简洁、口语化、用短句或分点，涉及商品必须给出货架位置与价格；\n` +
-    `2. 只能依据用户消息里提供的商品清单与促销信息回答，严禁编造商品、价格、库存；\n` +
-    `3. 缺货或库存低时，主动推荐同类替代品；\n` +
-    `4. 顾客问"怎么用/怎么装"时给出实用步骤；\n` +
-    `5. 超出店铺经营范围的问题，礼貌说明并建议询问店主。`
-  );
+async function callGateway(question: string, signal?: AbortSignal): Promise<string> {
+  if (!supabase) throw new Error('AI 服务尚未配置');
+  const pathSlug = window.location.pathname.match(/^\/s\/([^/]+)$/)?.[1];
+  const slug = useAuth().currentStore.value?.slug || pathSlug || new URLSearchParams(window.location.search).get('store');
+  if (!slug) throw new Error('未指定公开门店');
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY }, body: JSON.stringify({ slug, question }), signal });
+  if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'ai_not_configured' ? '门店 AI 服务尚未配置' : 'AI 服务暂不可用，请稍后重试'); }
+  const reader = response.body.getReader(); const decoder = new TextDecoder(); let answer = '';
+  let complete = false;
+  while (!complete) { const { value, done } = await reader.read(); complete = done; if (done) break; const lines = decoder.decode(value, { stream: true }).split('\n'); for (const line of lines) { if (!line.startsWith('data:')) continue; const data = line.slice(5).trim(); if (!data || data === '[DONE]') continue; try { answer += JSON.parse(data)?.choices?.[0]?.delta?.content ?? ''; } catch { /* SSE boundary */ } } }
+  if (!answer.trim()) throw new Error('AI 服务未返回内容'); return answer.trim();
 }
 
-function catalogPrompt(question: string): string {
-  const catalog = products.value.map((p) => ({
-    name: p.name,
-    category: p.category,
-    price: p.price,
-    stock: p.stock,
-    location: p.location,
-    desc: p.desc.slice(0, 80)
-  }));
-  return JSON.stringify({
-    question,
-    catalog,
-    promotions: activePromotions()
-  });
-}
-
-async function callDeepSeek(system: string, user: string): Promise<string> {
-  const cfg = llmConfig.value;
-  const url = `${cfg.baseUrl.replace(/\/+$/, '')}/chat/completions`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs || 30000);
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${cfg.apiKey.trim()}`
-      },
-      body: JSON.stringify({
-        model: cfg.model || 'deepseek-chat',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user }
-        ],
-        temperature: 0.4
-      }),
-      signal: controller.signal
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || !content.trim()) throw new Error('empty content');
-    return content.trim();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export async function askBuyerQuestion(question: string): Promise<AiReply> {
+export async function askBuyerQuestion(question: string, signal?: AbortSignal): Promise<AiReply> {
   const q = question.trim();
   if (!q) return { text: '请先告诉我您想找什么，比如「16mm膨胀螺丝在哪」。', demo: true, source: 'local' };
-  if (hasApiKey()) {
-    try {
-      const text = await callDeepSeek(systemPrompt(), catalogPrompt(q));
-      if (text) return { text, demo: false, source: 'ai' };
-    } catch {
-      // 网络/Key 异常时降级本地回答
-    }
-  }
+  if (!isDemoMode) return { text: await callGateway(q, signal), demo: false, source: 'ai' };
   return fallbackAnswer(q);
 }
 

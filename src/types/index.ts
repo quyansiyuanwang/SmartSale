@@ -42,6 +42,11 @@ export interface CustomerQuery {
   answer: string;
   demo: boolean;
   createdAt: string;
+  provider?: string | null;
+  model?: string | null;
+  latencyMs?: number | null;
+  sourceDocumentIds?: string[];
+  error?: string | null;
 }
 
 export interface Promotion {
@@ -57,6 +62,7 @@ export interface LlmConfig {
   baseUrl: string;
   model: string;
   timeoutMs: number;
+  provider?: 'deepseek' | 'openai-compatible';
 }
 
 export interface StoreProfile {

@@ -1,4 +1,5 @@
-import { products, sales, persistProducts, persistSales } from './data';
+import { products, sales, persistProducts, persistSales, recordRemoteSale } from './data';
+import { isDemoMode } from '@/lib/supabase';
 import { SaleRecord } from '@/types';
 import { uid, nowISO } from './storage.service';
 
@@ -13,6 +14,18 @@ export async function recordSale(productId: string, qty: number): Promise<SaleRe
   if (!p) return { ok: false, error: '商品不存在' };
   if (!Number.isFinite(qty) || qty <= 0) return { ok: false, error: '数量必须大于 0' };
   if (p.stock < qty) return { ok: false, error: `库存不足，当前仅剩 ${p.stock} 件` };
+
+  if (!isDemoMode) {
+    try {
+      const sale = await recordRemoteSale(productId, qty);
+      p.stock -= qty;
+      p.updatedAt = nowISO();
+      sales.value.unshift(sale);
+      return { ok: true, sale };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : '销售保存失败' };
+    }
+  }
 
   p.stock -= qty;
   p.updatedAt = nowISO();

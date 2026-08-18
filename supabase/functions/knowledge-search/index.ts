@@ -1,0 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders, json } from '../_shared/cors.ts';
+import { embed } from '../_shared/ai.ts';
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+Deno.serve(async (request) => { if (request.method === 'OPTIONS') return new Response('ok',{headers:corsHeaders}); try { const { slug, query } = await request.json(); if (typeof slug !== 'string' || typeof query !== 'string' || !query.trim()) return json({error:'invalid_request'},400); const {data:store}=await admin.from('stores').select('id').eq('slug',slug).single(); if(!store) return json({error:'store_not_found'},404); const vector=await embed(query); const {data,error}=await admin.rpc('match_knowledge_chunks',{target_store_id:store.id,query_embedding:`[${vector.join(',')}]`,match_count:6}); if(error) throw error; return json({chunks:data}); } catch(error) { return json({error:'search_unavailable',message:error instanceof Error?error.message:'unknown_error'},503); } });

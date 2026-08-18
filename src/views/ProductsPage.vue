@@ -11,7 +11,7 @@
 
     <ion-content :fullscreen="true">
       <ion-list>
-        <ion-item v-for="p in filtered" :key="p.id" button router-link="`/product/${p.id}`" detail>
+        <ion-item v-for="p in filtered" :key="p.id" button :router-link="`/product/${p.id}`" detail>
           <ion-thumbnail slot="start" class="prod-thumb">
             <div class="thumb-inner">{{ p.category.slice(0, 1) }}</div>
           </ion-thumbnail>

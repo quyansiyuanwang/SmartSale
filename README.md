@@ -1,7 +1,7 @@
 # 智售引擎（Smart Sale）
 
 > AI 赋能传统小微零售的轻量化改造 · MVP
-> Ionic 8 + Vue 3 + TypeScript + Capacitor · Web/PWA 优先，数据本地优先
+> Ionic 8 + Vue 3 + TypeScript + Capacitor · Web/PWA 优先，Supabase 多租户生产架构
 
 「智售引擎」首期 MVP 包含两个入口，同一份本地数据、同一条业务闭环：
 
@@ -15,7 +15,7 @@
 ## 快速开始
 
 ```bash
-# 安装依赖（需要 Node 18+）
+# 安装依赖（需要 Node 22）
 npm install
 
 # 本地开发（浏览器访问 http://localhost:5173）
@@ -178,3 +178,14 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 ## 文档
 
 - 立项依据 / 双 Agent 方案详见 `goal/` 目录。
+# 生产环境配置
+
+生产模式使用 Supabase Postgres、Auth、Storage 和 Edge Functions。复制 `.env.example` 到本地环境并填写 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`；不要把供应商密钥写入前端环境变量。
+
+执行 `supabase db reset` 或将 `supabase/migrations` 部署到开发项目后，为门店创建成员并配置 Storage。Edge Functions 需要以下 Secrets：`DEEPSEEK_API_KEY` 或 `OPENAI_COMPATIBLE_API_KEY`/`OPENAI_COMPATIBLE_BASE_URL`，以及 `EMBEDDING_API_KEY`、`EMBEDDING_BASE_URL`、`EMBEDDING_MODEL`、`SUPABASE_SERVICE_ROLE_KEY`。知识库单文件上限 10 MB，文档必须发布后才会被顾客问答检索。
+
+管理端使用邮箱登录，顾客端使用 `/s/<store-slug>` 公开入口。数据库 RLS 按 `store_id` 隔离 owner、manager、staff 权限；销售必须通过 `record_sale` RPC 扣库存并保存价格快照。未配置 Supabase 时，只有显式 `VITE_DEMO_MODE=true`（或测试模式）才会播种本地演示数据，生产环境不会自动写入种子。
+
+## CI 与发布
+
+所有分支 push 和手动 `workflow_dispatch` 会生成 Web、Android debug、iOS unsigned 制品并保留 30 天；`vX.Y.Z` tag 还会校验 `package.json.version`，在签名 Secrets 齐全后创建 GitHub Release。当前移动端签名材料缺失时，正式 tag 会失败且不会创建不完整 Release。
