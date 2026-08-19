@@ -134,7 +134,7 @@
 /* ============ 管理端响应式壳层 ============ */
 .merchant-sidebar, .merchant-topbar { display: none; }
 @media (min-width: 1024px) {
-  .merchant-sidebar { display: flex; position: fixed; inset: 0 auto 0 0; z-index: 20; width: 216px; flex-direction: column; padding: 18px 12px; background: #17212b; color: #e8eef3; }
+  .merchant-sidebar { display: flex; position: fixed; left: 0; top: 0; bottom: 0; z-index: 20; width: 216px; box-sizing: border-box; flex-direction: column; padding: 18px 12px; background: #17212b; color: #e8eef3; }
   .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-weight: 700; letter-spacing: .02em; }
   .brand-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: #f2b84b; color: #17212b; font-weight: 800; }
   .sidebar-link { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; color: #b5c1cb; text-decoration: none; border-radius: 6px; font-size: 14px; }
@@ -143,9 +143,10 @@
   .sidebar-foot { margin-top: auto; padding: 12px; color: #81909d; font-size: 11px; }
   .merchant-topbar { display: flex; position: fixed; top: 0; right: 0; left: 216px; z-index: 15; height: 52px; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(255,255,255,.96); border-bottom: 1px solid #e4e9ed; color: #27333d; }
   .merchant-topbar span { color: #81909d; font-size: 12px; }
-  ion-tabs { margin-left: 216px; padding-top: 52px; }
+  .merchant-layout > ion-tabs { display: block; width: calc(100vw - 216px); height: 100%; margin: 0 0 0 216px; padding-top: 52px; box-sizing: border-box; }
   ion-tab-bar { display: none; }
-  ion-router-outlet { max-width: 1440px; margin: 0 auto; }
+  .merchant-layout ion-router-outlet { display: block; width: 100%; max-width: none; margin: 0; }
+  .merchant-layout ion-router-outlet > .ion-page { inset: 0; }
   ion-content.ion-padding { --padding-start: 24px; --padding-end: 24px; --padding-top: 20px; }
   ion-card { margin: 0 0 12px; border: 1px solid #e4e9ed; box-shadow: none; border-radius: 6px; }
   ion-card-header { padding: 12px 16px 6px; } ion-card-content { padding: 8px 16px 14px; }

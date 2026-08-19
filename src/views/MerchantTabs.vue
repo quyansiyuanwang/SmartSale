@@ -1,5 +1,5 @@
 <template>
-  <ion-page>
+  <ion-page class="merchant-layout">
     <aside class="merchant-sidebar">
       <div class="sidebar-brand"><span class="brand-mark">S</span><span>智售引擎</span></div>
       <nav aria-label="管理导航">

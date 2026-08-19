@@ -144,6 +144,8 @@ async function save() {
       await notify('已保存');
     }
     router.back();
+  } catch (error) {
+    await notify(error instanceof Error ? error.message : '保存失败', 'danger');
   } finally {
     saving.value = false;
   }
