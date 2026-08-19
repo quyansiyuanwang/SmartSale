@@ -2,6 +2,11 @@
   <ion-page>
     <ion-header translucent>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-button router-link="/tabs/home" aria-label="返回首页">
+            <ion-icon slot="icon-only" :icon="arrowBack" />
+          </ion-button>
+        </ion-buttons>
         <ion-title>销售录入</ion-title>
       </ion-toolbar>
       <ion-toolbar>
@@ -65,10 +70,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonSearchbar, IonContent, IonList, IonItem,
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonSearchbar, IonContent, IonList, IonItem,
   IonLabel, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonInput,
   IonButton, IonIcon, IonNote } from '@ionic/vue';
-import { checkmark } from 'ionicons/icons';
+import { arrowBack, checkmark } from 'ionicons/icons';
 import { Product } from '@/types';
 import { listProducts } from '@/services/product.service';
 import { recordSale, todaySales } from '@/services/sale.service';
