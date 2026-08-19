@@ -180,6 +180,12 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 - 立项依据 / 双 Agent 方案详见 `goal/` 目录。
 # 生产环境配置
 
+### 简化配置
+
+本机开发可以运行 `npm run db:start`（需要 Docker Desktop），然后在管理端「店铺与服务设置」填写 Supabase URL、Anon Key 和 AI API Key。默认本机数据库地址是 `http://127.0.0.1:54321`，Anon Key 可通过 `npm run db:status` 查看。远端项目同样只需填写项目 URL 与 anon key，保存后页面会刷新并连接对应数据库。
+
+本机模式的 AI Key 会保存到当前设备的 Capacitor Preferences，适合开发和内网使用。公开生产环境不要让顾客设备持有供应商 Key，应使用 `ai-chat` Edge Function Secrets。
+
 生产模式使用 Supabase Postgres、Auth、Storage 和 Edge Functions。复制 `.env.example` 到本地环境并填写 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`；不要把供应商密钥写入前端环境变量。
 
 执行 `supabase db reset` 或将 `supabase/migrations` 部署到开发项目后，为门店创建成员并配置 Storage。Edge Functions 需要以下 Secrets：`DEEPSEEK_API_KEY` 或 `OPENAI_COMPATIBLE_API_KEY`/`OPENAI_COMPATIBLE_BASE_URL`，以及 `EMBEDDING_API_KEY`、`EMBEDDING_BASE_URL`、`EMBEDDING_MODEL`、`SUPABASE_SERVICE_ROLE_KEY`。知识库单文件上限 10 MB，文档必须发布后才会被顾客问答检索。

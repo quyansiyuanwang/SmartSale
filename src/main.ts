@@ -31,12 +31,14 @@ registerSW({ immediate: true });
 /* Load local data before mounting */
 import { loadAll } from './services/data';
 import { useAuth } from './composables/useAuth';
+import { loadRuntimeConfig } from './services/runtime-config.service';
+import { configureSupabase } from './lib/supabase';
 
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
 
-useAuth().initializeAuth().then(loadAll).finally(() => {
+loadRuntimeConfig().then(() => { configureSupabase(); return useAuth().initializeAuth(); }).then(loadAll).finally(() => {
   router.isReady().then(() => {
     app.mount('#app');
   });

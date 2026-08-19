@@ -4,6 +4,7 @@ import { findProductByName, updateProduct } from './product.service';
 import { topProducts, slowMoving, fmtMoney } from './report.service';
 import { isDemoMode, supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
+import { runtimeConfig } from '@/services/runtime-config.service';
 
 interface SceneDef {
   keywords: RegExp;
@@ -96,9 +97,16 @@ async function callGateway(question: string, signal?: AbortSignal): Promise<stri
   if (!answer.trim()) throw new Error('AI 服务未返回内容'); return answer.trim();
 }
 
+async function callLocalProvider(question: string, signal?: AbortSignal): Promise<string> {
+  const cfg = runtimeConfig.value; if (!cfg.aiApiKey.trim()) throw new Error('请先在设置页配置 AI API Key');
+  const response = await fetch(`${cfg.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.aiApiKey.trim()}` }, body: JSON.stringify({ model: cfg.aiModel, messages: [{ role: 'user', content: question }], temperature: 0.35 }), signal });
+  if (!response.ok) throw new Error(`AI 服务返回 HTTP ${response.status}`); const data = await response.json(); const text = data?.choices?.[0]?.message?.content; if (typeof text !== 'string' || !text.trim()) throw new Error('AI 服务没有返回内容'); return text.trim();
+}
+
 export async function askBuyerQuestion(question: string, signal?: AbortSignal): Promise<AiReply> {
   const q = question.trim();
   if (!q) return { text: '请先告诉我您想找什么，比如「16mm膨胀螺丝在哪」。', demo: true, source: 'local' };
+  if (runtimeConfig.value.aiApiKey.trim()) return { text: await callLocalProvider(q, signal), demo: false, source: 'ai' };
   if (!isDemoMode) return { text: await callGateway(q, signal), demo: false, source: 'ai' };
   return fallbackAnswer(q);
 }
