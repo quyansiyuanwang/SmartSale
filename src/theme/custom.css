@@ -135,16 +135,17 @@
 /* ============ 管理端响应式壳层 ============ */
 .merchant-sidebar, .merchant-topbar { display: none; }
 @media (min-width: 1024px) {
-  .merchant-sidebar { display: flex; position: fixed; left: 0; top: 0; bottom: 0; z-index: 20; width: 216px; box-sizing: border-box; flex-direction: column; padding: 18px 12px; background: #17212b; color: #e8eef3; }
+  .merchant-layout { display: grid; grid-template-columns: 216px minmax(0, 1fr); grid-template-rows: 52px minmax(0, 1fr); width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
+  .merchant-sidebar { display: flex; position: relative; grid-column: 1; grid-row: 1 / 3; z-index: 20; width: auto; min-width: 0; box-sizing: border-box; flex-direction: column; padding: 18px 12px; background: #17212b; color: #e8eef3; }
   .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; font-weight: 700; letter-spacing: .02em; }
   .brand-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: #f2b84b; color: #17212b; font-weight: 800; }
   .sidebar-link { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; color: #b5c1cb; text-decoration: none; border-radius: 6px; font-size: 14px; }
   .sidebar-link:hover, .sidebar-link.router-link-active { background: #263746; color: #fff; }
   .sidebar-link ion-icon { font-size: 18px; }
   .sidebar-foot { margin-top: auto; padding: 12px; color: #81909d; font-size: 11px; }
-  .merchant-topbar { display: flex; position: fixed; top: 0; right: 0; left: 216px; z-index: 15; height: 52px; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(255,255,255,.96); border-bottom: 1px solid #e4e9ed; color: #27333d; }
+  .merchant-topbar { display: flex; position: relative; grid-column: 2; grid-row: 1; z-index: 15; width: auto; min-width: 0; height: 52px; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(255,255,255,.96); border-bottom: 1px solid #e4e9ed; color: #27333d; }
   .merchant-topbar span { color: #81909d; font-size: 12px; }
-  .merchant-layout > ion-tabs { position: fixed; inset: 52px 0 0 216px; display: block; width: auto; height: auto; margin: 0; padding: 0; overflow: hidden; }
+  .merchant-layout > ion-tabs { position: relative; grid-column: 2; grid-row: 2; display: block; width: auto; height: auto; min-width: 0; min-height: 0; margin: 0; padding: 0; overflow: hidden; }
   ion-tab-bar { display: none; }
   .merchant-layout ion-router-outlet { position: relative; display: block; width: 100%; height: 100%; max-width: none; min-width: 0; margin: 0; overflow: hidden; }
   .merchant-layout ion-router-outlet > .ion-page { position: absolute; inset: 0; width: auto; max-width: none; }

@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title>商品管理</ion-title>
         <ion-buttons slot="end">
-          <ion-button router-link="/product/new" class="products-add-button" aria-label="新增商品">
+          <ion-button class="products-add-button" aria-label="新增商品" @click="openCreate">
             <ion-icon slot="start" :icon="add" />
             <span>新增商品</span>
           </ion-button>
@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonSearchbar, IonContent, IonList, IonItem,
   IonThumbnail, IonLabel, IonBadge, IonIcon } from '@ionic/vue';
 import { add } from 'ionicons/icons';
@@ -48,5 +49,10 @@ import { listProducts } from '@/services/product.service';
 import { fmtMoney } from '@/services/report.service';
 
 const search = ref('');
+const router = useRouter();
 const filtered = computed(() => listProducts(search.value));
+
+function openCreate() {
+  void router.push('/product/new');
+}
 </script>
