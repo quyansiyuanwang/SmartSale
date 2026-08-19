@@ -18,6 +18,9 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
+  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+  VITE_APP_PUBLIC_BASE_URL: ${{ vars.VITE_APP_PUBLIC_BASE_URL }}
 
 jobs:
   quality:
@@ -120,6 +123,11 @@ jobs:
     needs: preflight
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
+    environment: ${{ needs.preflight.outputs.is_release == 'true' && 'production' || 'development' }}
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+      VITE_APP_PUBLIC_BASE_URL: ${{ vars.VITE_APP_PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -150,6 +158,11 @@ jobs:
     needs: preflight
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
+    environment: ${{ needs.preflight.outputs.is_release == 'true' && 'production' || 'development' }}
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+      VITE_APP_PUBLIC_BASE_URL: ${{ vars.VITE_APP_PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -210,6 +223,11 @@ jobs:
     needs: preflight
     if: github.event_name != 'pull_request'
     runs-on: macos-14
+    environment: ${{ needs.preflight.outputs.is_release == 'true' && 'production' || 'development' }}
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+      VITE_APP_PUBLIC_BASE_URL: ${{ vars.VITE_APP_PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

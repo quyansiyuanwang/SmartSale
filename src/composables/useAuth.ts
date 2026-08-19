@@ -21,6 +21,9 @@ export function useAuth() {
     currentStore.value = store ? { ...store, role: data!.role as StoreRole } : null;
   }
   async function signIn(email: string, password: string) { if (!supabase) throw new Error('Supabase 尚未配置'); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) throw error; await loadCurrentStore(); }
+  async function signUp(email: string, password: string) { if (!supabase) throw new Error('平台服务尚未配置'); const { data, error } = await supabase.auth.signUp({ email, password }); if (error) throw error; session.value = data.session; if (data.session) await loadCurrentStore(); return Boolean(data.session); }
+  async function resetPassword(email: string) { if (!supabase) throw new Error('平台服务尚未配置'); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` }); if (error) throw error; }
+  async function onboardStore(input: { name: string; address?: string; phone?: string; hours?: string }) { if (!supabase) throw new Error('平台服务尚未配置'); const { data, error } = await supabase.functions.invoke('onboarding', { body: input }); if (error) throw error; await loadCurrentStore(); return data?.store as CurrentStore | undefined; }
   async function signOut() { if (supabase) { const { error } = await supabase.auth.signOut(); if (error) throw error; } currentStore.value = null; }
-  return { session, user, currentStore, ready, initializeAuth, loadCurrentStore, signIn, signOut, isOwner: computed(() => currentStore.value?.role === 'owner'), canManage: computed(() => ['owner', 'manager'].includes(currentStore.value?.role ?? '')) };
+  return { session, user, currentStore, ready, initializeAuth, loadCurrentStore, signIn, signUp, resetPassword, onboardStore, signOut, isOwner: computed(() => currentStore.value?.role === 'owner'), canManage: computed(() => ['owner', 'manager'].includes(currentStore.value?.role ?? '')) };
 }

@@ -7,6 +7,7 @@ import { useAuth } from '@/composables/useAuth';
 const routes: Array<RouteRecordRaw> = [
   { path: '/', redirect: '/tabs/home' },
   { path: '/login', component: () => import('@/views/LoginPage.vue'), meta: { public: true } },
+  { path: '/onboarding', component: () => import('@/views/OnboardingPage.vue') },
   {
     path: '/tabs',
     component: MerchantTabs,
@@ -35,9 +36,12 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   if (isDemoMode || !hasSupabaseConfig || to.meta.public) return true;
-  const { user, initializeAuth } = useAuth();
+  const { user, currentStore, initializeAuth } = useAuth();
   if (!user.value) await initializeAuth();
-  return user.value ? true : { path: '/login', query: { redirect: to.fullPath } };
+  if (!user.value) return { path: '/login', query: { redirect: to.fullPath } };
+  if (!currentStore.value && to.path !== '/onboarding') return { path: '/onboarding' };
+  if (currentStore.value && to.path === '/onboarding') return { path: '/tabs/home' };
+  return true;
 });
 
 export default router;

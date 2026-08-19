@@ -4,7 +4,7 @@ import { findProductByName, updateProduct } from './product.service';
 import { topProducts, slowMoving, fmtMoney } from './report.service';
 import { isDemoMode, supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
-import { runtimeConfig } from '@/services/runtime-config.service';
+import { getPlatformConfig } from '@/lib/platform-config';
 
 interface SceneDef {
   keywords: RegExp;
@@ -89,24 +89,18 @@ async function callGateway(question: string, signal?: AbortSignal): Promise<stri
   const pathSlug = window.location.pathname.match(/^\/s\/([^/]+)$/)?.[1];
   const slug = useAuth().currentStore.value?.slug || pathSlug || new URLSearchParams(window.location.search).get('store');
   if (!slug) throw new Error('未指定公开门店');
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY }, body: JSON.stringify({ slug, question }), signal });
-  if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'ai_not_configured' ? '门店 AI 服务尚未配置' : 'AI 服务暂不可用，请稍后重试'); }
+  const { supabaseUrl, supabaseAnonKey } = getPlatformConfig();
+  const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey }, body: JSON.stringify({ slug, question }), signal });
+  if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'store_suspended' ? '门店服务已暂停' : data?.error === 'ai_not_configured' ? '平台 AI 服务暂不可用' : 'AI 服务暂不可用，请稍后重试'); }
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let answer = '';
   let complete = false;
   while (!complete) { const { value, done } = await reader.read(); complete = done; if (done) break; const lines = decoder.decode(value, { stream: true }).split('\n'); for (const line of lines) { if (!line.startsWith('data:')) continue; const data = line.slice(5).trim(); if (!data || data === '[DONE]') continue; try { answer += JSON.parse(data)?.choices?.[0]?.delta?.content ?? ''; } catch { /* SSE boundary */ } } }
   if (!answer.trim()) throw new Error('AI 服务未返回内容'); return answer.trim();
 }
 
-async function callLocalProvider(question: string, signal?: AbortSignal): Promise<string> {
-  const cfg = runtimeConfig.value; if (!cfg.aiApiKey.trim()) throw new Error('请先在设置页配置 AI API Key');
-  const response = await fetch(`${cfg.aiBaseUrl.replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.aiApiKey.trim()}` }, body: JSON.stringify({ model: cfg.aiModel, messages: [{ role: 'user', content: question }], temperature: 0.35 }), signal });
-  if (!response.ok) throw new Error(`AI 服务返回 HTTP ${response.status}`); const data = await response.json(); const text = data?.choices?.[0]?.message?.content; if (typeof text !== 'string' || !text.trim()) throw new Error('AI 服务没有返回内容'); return text.trim();
-}
-
 export async function askBuyerQuestion(question: string, signal?: AbortSignal): Promise<AiReply> {
   const q = question.trim();
   if (!q) return { text: '请先告诉我您想找什么，比如「16mm膨胀螺丝在哪」。', demo: true, source: 'local' };
-  if (runtimeConfig.value.aiApiKey.trim()) return { text: await callLocalProvider(q, signal), demo: false, source: 'ai' };
   if (!isDemoMode) return { text: await callGateway(q, signal), demo: false, source: 'ai' };
   return fallbackAnswer(q);
 }

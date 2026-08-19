@@ -1,0 +1,8 @@
+<template>
+  <ion-page class="onboarding-page"><ion-content :fullscreen="true" class="ion-padding"><main class="onboarding-shell"><section><p class="eyebrow">首次开通</p><h1>创建你的门店</h1><p>完成后会自动生成顾客扫码入口和专属管理空间。</p></section><form class="onboarding-form" @submit.prevent="submit"><ion-item><ion-input v-model="form.name" label="门店名称" label-placement="stacked" placeholder="例如：惠民五金店" :maxlength="120" required /></ion-item><ion-item><ion-input v-model="form.address" label="门店地址" label-placement="stacked" placeholder="用于顾客到店导航" /></ion-item><div class="onboarding-grid"><ion-item><ion-input v-model="form.phone" label="联系电话" label-placement="stacked" inputmode="tel" /></ion-item><ion-item><ion-input v-model="form.hours" label="营业时间" label-placement="stacked" placeholder="08:00-21:00" /></ion-item></div><ion-note v-if="error" color="danger" class="auth-error">{{ error }}</ion-note><ion-button type="submit" expand="block" :disabled="saving">{{ saving ? '正在创建…' : '创建门店并继续' }}</ion-button></form></main></ion-content></ion-page>
+</template>
+<script setup lang="ts">
+import { reactive, ref } from 'vue'; import { useRouter } from 'vue-router'; import { IonPage, IonContent, IonItem, IonInput, IonButton, IonNote } from '@ionic/vue'; import { useAuth } from '@/composables/useAuth';
+const router=useRouter();const {onboardStore}=useAuth();const saving=ref(false);const error=ref('');const form=reactive({name:'',address:'',phone:'',hours:'08:00-21:00'});
+async function submit(){saving.value=true;error.value='';try{await onboardStore(form);await router.replace('/settings?welcome=1');}catch(caught){error.value=caught instanceof Error?caught.message:'门店创建失败，请重试';}finally{saving.value=false;}}
+</script>

@@ -33,16 +33,16 @@
         </ion-item>
         <ion-item button router-link="/settings">
           <ion-icon slot="start" :icon="settings" />
-          <ion-label>店铺与 AI 设置</ion-label>
+          <ion-label>门店服务与二维码</ion-label>
         </ion-item>
       </ion-list>
 
       <ion-list inset>
         <ion-item>
           <ion-icon slot="start" :icon="sparkles" />
-          <ion-label>AI 模式</ion-label>
+          <ion-label>平台 AI 服务</ion-label>
           <ion-badge :color="hasKey ? 'success' : 'warning'" slot="end">
-            {{ hasKey ? '服务端配置' : '未配置' }}
+            {{ hasKey ? '平台托管' : '演示模式' }}
           </ion-badge>
         </ion-item>
         <ion-item>
@@ -56,7 +56,7 @@
         <ion-button v-if="!productionStorage" expand="block" fill="outline" color="danger" @click="confirmReset">
           <ion-icon slot="start" :icon="refresh" />重置演示数据
         </ion-button>
-        <p class="center-note">智售引擎 MVP · Ionic + Capacitor + Vue 3 · AI：DeepSeek（可配置，无 Key 自动降级）</p>
+        <p class="center-note">智售引擎 · 云端门店服务 · 平台托管 AI</p>
       </div>
     </ion-content>
   </ion-page>

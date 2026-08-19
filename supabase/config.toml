@@ -14,3 +14,9 @@ verify_jwt = true
 
 [functions.knowledge-ingest]
 verify_jwt = true
+
+[functions.onboarding]
+verify_jwt = true
+
+[functions.import-products]
+verify_jwt = true

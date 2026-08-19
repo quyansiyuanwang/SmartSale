@@ -10,6 +10,9 @@
     </ion-header>
 
     <ion-content :fullscreen="true">
+      <div v-if="publicStoreStatus === 'suspended'" class="public-status"><ion-icon :icon="pauseCircle" /><h2>门店服务暂时不可用</h2><p>请联系门店工作人员，或稍后再试。</p></div>
+      <div v-else-if="publicStoreStatus === 'not-found'" class="public-status"><ion-icon :icon="alertCircle" /><h2>未找到此门店</h2><p>请确认二维码或公开链接是否正确。</p></div>
+      <template v-else>
       <div class="buyer-hero">
         <h2>👋 {{ storeProfile.welcome }}</h2>
         <ion-chip v-for="tip in tips" :key="tip" outline color="light" @click="quickAsk(tip)">
@@ -47,9 +50,10 @@
         <div>{{ storeProfile.address }}</div>
         <div>{{ storeProfile.hours }} · {{ storeProfile.phone }}</div>
       </div>
+      </template>
     </ion-content>
 
-    <ion-footer class="input-footer">
+    <ion-footer v-if="publicStoreStatus === 'active'" class="input-footer">
       <ion-toolbar>
         <ion-item lines="none" class="input-row">
           <ion-input v-model="input" placeholder="问问智购顾问…" @keyup.enter="send()" />
@@ -74,8 +78,8 @@ import { useRoute } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent,
   IonChip, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonIcon, IonFooter, IonItem,
   IonInput, IonNote, IonSpinner } from '@ionic/vue';
-import { mic, stop, refresh, send as sendIcon, pricetag } from 'ionicons/icons';
-import { storeProfile, promotions, loadPublicStore } from '@/services/data';
+import { mic, stop, refresh, send as sendIcon, pricetag, pauseCircle, alertCircle } from 'ionicons/icons';
+import { storeProfile, promotions, loadPublicStore, publicStoreStatus } from '@/services/data';
 import { askBuyerQuestion } from '@/services/ai.service';
 import { addQuery } from '@/services/query.service';
 import { useSpeech } from '@/composables/useSpeech';

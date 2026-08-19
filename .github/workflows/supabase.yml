@@ -40,3 +40,14 @@ jobs:
           supabase functions deploy knowledge-search --no-verify-jwt
           supabase functions deploy ai-command
           supabase functions deploy knowledge-ingest
+          supabase functions deploy onboarding
+          supabase functions deploy import-products
+      - name: Verify public API
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_ANON_KEY"
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$VITE_SUPABASE_URL/functions/v1/public-store?slug=invalid-store" -H "apikey: $VITE_SUPABASE_ANON_KEY")"
+          test "$status" = "404"

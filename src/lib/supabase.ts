@@ -1,15 +1,15 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getPlatformConfig } from './platform-config';
 
 export let hasSupabaseConfig = false;
 export let isDemoMode = true;
 export let supabase: SupabaseClient | null = null;
 
-export function configureSupabase(url?: string, anonKey?: string): void {
-  const configuredUrl = url?.trim() || import.meta.env.VITE_SUPABASE_URL?.trim() || '';
-  const configuredKey = anonKey?.trim() || import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || '';
-  hasSupabaseConfig = Boolean(configuredUrl && configuredKey);
-  isDemoMode = import.meta.env.MODE === 'test' || import.meta.env.VITE_DEMO_MODE === 'true' || !hasSupabaseConfig;
-  supabase = hasSupabaseConfig ? createClient(configuredUrl, configuredKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+export function configureSupabase(): void {
+  const config = getPlatformConfig();
+  hasSupabaseConfig = config.isConfigured;
+  isDemoMode = config.isDemoMode;
+  supabase = hasSupabaseConfig ? createClient(config.supabaseUrl, config.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
 }
 
 configureSupabase();

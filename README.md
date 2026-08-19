@@ -34,6 +34,24 @@ npm run preview
 npx cap sync
 ```
 
+### 云端门店服务
+
+生产版本由平台统一托管 Supabase，不需要商家填写数据库地址或 AI Key。商家打开 PWA 后使用邮箱注册，首次登录会创建门店并进入初始化向导；后台设置页可以下载固定的顾客二维码、暂停公开服务，以及下载 CSV 模板批量导入商品。
+
+顾客二维码地址固定为 `https://app.<正式域名>/s/<store-slug>`。顾客无需登录即可查看该门店公开商品、价格、促销并进行售前问答。门店暂停后二维码仍有效，但只显示服务暂停页。
+
+平台部署需要在 GitHub Actions 的 `development` 和 `production` Environment 配置：
+
+| 类型 | 名称 | 用途 |
+| --- | --- | --- |
+| Variables | `VITE_SUPABASE_URL` | 前端连接对应 Supabase 项目 |
+| Variables | `VITE_SUPABASE_ANON_KEY` | 前端公开 anon key |
+| Variables | `VITE_APP_PUBLIC_BASE_URL` | 二维码和公开链接的正式域名 |
+| Secrets | `SUPABASE_ACCESS_TOKEN` | Supabase CLI 部署授权 |
+| Secrets | `SUPABASE_PROJECT_REF` | 对应环境的 Supabase 项目 ID |
+
+Supabase Function Secrets 只在云端配置 `DEEPSEEK_API_KEY`、Embedding Provider 配置和 `SUPABASE_SERVICE_ROLE_KEY`。商家设备不保存供应商密钥。执行 `.github/workflows/supabase.yml` 的手动工作流会依次应用 migration、部署 Functions 并检查公开 API。
+
 ### PWA
 
 - 构建产物为可安装 PWA（含 `manifest.webmanifest` 与 Service Worker，`zh-CN`，可离线运行）。

@@ -12,8 +12,9 @@ Deno.serve(async (request) => {
   try {
     const { slug, question, messages = [] } = await request.json();
     if (typeof slug !== 'string' || !/^[a-z0-9-]{3,64}$/.test(slug) || typeof question !== 'string' || !question.trim() || question.length > maxQuestionLength || !Array.isArray(messages)) return json({ error: 'invalid_request' }, 400);
-    const { data: store, error: storeError } = await admin.from('stores').select('id,name,address,hours,welcome,default_model_id').eq('slug', slug).single();
+    const { data: store, error: storeError } = await admin.from('stores').select('id,name,address,hours,welcome,default_model_id,service_status,public_enabled').eq('slug', slug).single();
     if (storeError || !store) return json({ error: 'store_not_found' }, 404);
+    if (store.service_status !== 'active' || !store.public_enabled) return json({ error: 'store_suspended' }, 423);
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
     const since = new Date(Date.now() - 60_000).toISOString();
     const { count } = await admin.from('rate_limit_events').select('*', { count: 'exact', head: true }).eq('store_id', store.id).eq('key', ip).eq('endpoint', 'ai-chat').gte('created_at', since);
