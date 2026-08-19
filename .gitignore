@@ -30,6 +30,7 @@ npm-debug.log*
 /platforms
 /plugins
 /www
+/goal
 
 # vite-plugin-pwa dev cache
 /dev-dist
