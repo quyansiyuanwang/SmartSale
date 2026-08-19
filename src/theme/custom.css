@@ -144,10 +144,10 @@
   .sidebar-foot { margin-top: auto; padding: 12px; color: #81909d; font-size: 11px; }
   .merchant-topbar { display: flex; position: fixed; top: 0; right: 0; left: 216px; z-index: 15; height: 52px; align-items: center; justify-content: space-between; padding: 0 28px; background: rgba(255,255,255,.96); border-bottom: 1px solid #e4e9ed; color: #27333d; }
   .merchant-topbar span { color: #81909d; font-size: 12px; }
-  .merchant-layout > ion-tabs { display: block; width: calc(100vw - 216px); height: 100%; margin: 0 0 0 216px; padding-top: 52px; box-sizing: border-box; }
+  .merchant-layout > ion-tabs { position: fixed; inset: 52px 0 0 216px; display: block; width: auto; height: auto; margin: 0; padding: 0; overflow: hidden; }
   ion-tab-bar { display: none; }
-  .merchant-layout ion-router-outlet { display: block; width: 100%; max-width: none; margin: 0; }
-  .merchant-layout ion-router-outlet > .ion-page { inset: 0; }
+  .merchant-layout ion-router-outlet { position: relative; display: block; width: 100%; height: 100%; max-width: none; min-width: 0; margin: 0; overflow: hidden; }
+  .merchant-layout ion-router-outlet > .ion-page { position: absolute; inset: 0; width: auto; max-width: none; }
   ion-content.ion-padding { --padding-start: 24px; --padding-end: 24px; --padding-top: 20px; }
   ion-card { margin: 0 0 12px; border: 1px solid #e4e9ed; box-shadow: none; border-radius: 6px; }
   ion-card-header { padding: 12px 16px 6px; } ion-card-content { padding: 8px 16px 14px; }
