@@ -3,6 +3,10 @@
     <ion-header translucent>
       <ion-toolbar>
         <ion-title>商品管理</ion-title>
+        <ion-button slot="end" router-link="/product/new" class="products-add-button">
+          <ion-icon slot="start" :icon="add" />
+          <span>新增商品</span>
+        </ion-button>
       </ion-toolbar>
       <ion-toolbar>
         <ion-searchbar v-model="search" placeholder="搜索名称 / 条码 / 货架" />
@@ -29,11 +33,6 @@
         </ion-item>
       </ion-list>
 
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-        <ion-fab-button router-link="/product/new">
-          <ion-icon :icon="add" />
-        </ion-fab-button>
-      </ion-fab>
     </ion-content>
   </ion-page>
 </template>
@@ -41,7 +40,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonSearchbar, IonContent, IonList, IonItem,
-  IonThumbnail, IonLabel, IonBadge, IonFab, IonFabButton, IonIcon } from '@ionic/vue';
+  IonThumbnail, IonLabel, IonBadge, IonIcon } from '@ionic/vue';
 import { add } from 'ionicons/icons';
 import { listProducts } from '@/services/product.service';
 import { fmtMoney } from '@/services/report.service';

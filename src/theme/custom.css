@@ -43,6 +43,7 @@
   color: #fff; font-weight: 700; font-size: 18px;
 }
 .prod-right { text-align: right; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.products-add-button { margin-right: 8px; --padding-start: 12px; --padding-end: 12px; }
 
 /* ============ 销售 ============ */
 .pick-list { border-radius: 12px; overflow: hidden; }
@@ -160,6 +161,9 @@
   .merchant-sidebar, .merchant-topbar { display: none; }
   .merchant-shell ion-tab-bar { padding-bottom: env(safe-area-inset-bottom); }
   ion-content { --padding-bottom: 14px; }
+  .products-add-button { min-width: 42px; width: 42px; height: 42px; margin-right: 4px; --padding-start: 0; --padding-end: 0; }
+  .products-add-button span { display: none; }
+  .products-add-button ion-icon { margin: 0; }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   ion-tab-bar { --background: #fff; }
