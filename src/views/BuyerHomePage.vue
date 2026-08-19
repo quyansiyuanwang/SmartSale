@@ -53,15 +53,15 @@
       <ion-toolbar>
         <ion-item lines="none" class="input-row">
           <ion-input v-model="input" placeholder="问问智购顾问…" @keyup.enter="send()" />
-          <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : speech.isError ? 'warning' : 'primary'" @click="toggleMic">
-            <ion-icon slot="icon-only" :icon="speech.listening ? stop : speech.isError ? refresh : mic" />
+          <ion-button v-if="speechSupported" shape="round" :color="listening ? 'danger' : speechIsError ? 'warning' : 'primary'" @click="toggleMic">
+            <ion-icon slot="icon-only" :icon="listening ? stop : speechIsError ? refresh : mic" />
           </ion-button>
           <ion-button shape="round" color="success" :disabled="thinking || !input.trim()" @click="send()">
             <ion-icon slot="icon-only" :icon="sendIcon" />
           </ion-button>
         </ion-item>
-        <ion-note v-if="speech.listening" color="danger" class="listen-note">正在聆听，点击停止取消…{{ speech.transcript }}</ion-note>
-        <ion-note v-else-if="speech.error" color="danger" class="listen-note">{{ speech.error }}，点击麦克风重试</ion-note>
+        <ion-note v-if="listening" color="danger" class="listen-note">正在聆听，点击停止取消…{{ transcript }}</ion-note>
+        <ion-note v-else-if="speechError" color="danger" class="listen-note">{{ speechError }}，点击麦克风重试</ion-note>
       </ion-toolbar>
     </ion-footer>
   </ion-page>
@@ -89,7 +89,7 @@ const msgs = ref<Array<{ role: 'user' | 'assistant'; text: string; source?: stri
 
 const activePromos = computed(() => promotions.value.filter((p) => p.active));
 
-const speech = useSpeech((text) => {
+const { supported: speechSupported, listening, isError: speechIsError, transcript, error: speechError, start: startSpeech, stop: stopSpeech, reset: resetSpeech } = useSpeech((text) => {
   input.value = text;
   void send();
 });
@@ -100,8 +100,8 @@ function quickAsk(tip: string) {
 }
 
 function toggleMic() {
-  if (speech.listening.value) speech.stop();
-  else { speech.reset(); speech.start(); }
+  if (listening.value) stopSpeech();
+  else { resetSpeech(); startSpeech(); }
 }
 
 async function send() {

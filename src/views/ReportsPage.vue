@@ -54,15 +54,15 @@
         <ion-card-content>
           <div class="cmd-row">
             <ion-input v-model="cmdText" placeholder="输入或按住麦克风说话" class="cmd-input" @keyup.enter="runCommand" />
-            <ion-button v-if="speech.supported" shape="round" :color="speech.listening ? 'danger' : speech.isError ? 'warning' : 'primary'" @click="toggleMic">
-              <ion-icon slot="icon-only" :icon="speech.listening ? stop : speech.isError ? refresh : mic" />
+            <ion-button v-if="speechSupported" shape="round" :color="listening ? 'danger' : speechIsError ? 'warning' : 'primary'" @click="toggleMic">
+              <ion-icon slot="icon-only" :icon="listening ? stop : speechIsError ? refresh : mic" />
             </ion-button>
             <ion-button shape="round" color="success" @click="runCommand">
               <ion-icon slot="icon-only" :icon="send" />
             </ion-button>
           </div>
-          <ion-note v-if="speech.listening" class="listening-note">正在聆听，点击停止取消…（{{ speech.transcript }}）</ion-note>
-          <ion-note v-else-if="speech.error" color="danger" class="listening-note">{{ speech.error }}</ion-note>
+          <ion-note v-if="listening" class="listening-note">正在聆听，点击停止取消…（{{ transcript }}）</ion-note>
+          <ion-note v-else-if="speechError" color="danger" class="listening-note">{{ speechError }}</ion-note>
           <div v-if="cmdResult" class="cmd-result">
             <ion-icon :icon="cmdResult.source === 'command' ? terminal : bulb" />
             <div>
@@ -99,14 +99,14 @@ const weekLabel = computed(() => {
 
 const cmdText = ref('');
 const cmdResult = ref<CommandResult['reply'] | null>(null);
-const speech = useSpeech((text) => {
+const { supported: speechSupported, listening, isError: speechIsError, transcript, error: speechError, start: startSpeech, stop: stopSpeech, reset: resetSpeech } = useSpeech((text) => {
   cmdText.value = text;
   void runCommand();
 });
 
 function toggleMic() {
-  if (speech.listening.value) speech.stop();
-  else { speech.reset(); speech.start(); }
+  if (listening.value) stopSpeech();
+  else { resetSpeech(); startSpeech(); }
 }
 
 async function runCommand() {
