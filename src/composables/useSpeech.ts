@@ -20,8 +20,18 @@ export function useSpeech(onFinal?: (text: string) => void) {
     rec.onend = () => { if (token !== activeToken) return; recognition = null; const naturallyCompleted = token !== cancelledToken && state.value !== 'error'; const text = (finalTranscript || transcript.value).trim(); if (naturallyCompleted) state.value = 'idle'; if (naturallyCompleted && text) onFinal?.(text); };
     try { rec.start(); state.value = 'listening'; } catch { if (token === activeToken) { error.value = '无法开始语音识别，请重试'; state.value = 'error'; } }
   }
-  function stop() { if (!recognition || !listening.value) { state.value = 'idle'; return; } cancelledToken = activeToken; state.value = 'idle'; transcript.value = ''; recognition.abort(); recognition = null; }
+  function stop() {
+    const current = recognition;
+    // Invalidate the session before aborting because Chromium can emit error/end later.
+    cancelledToken = activeToken;
+    activeToken += 1;
+    recognition = null;
+    transcript.value = '';
+    error.value = null;
+    state.value = 'idle';
+    current?.abort();
+  }
   function reset() { transcript.value = ''; error.value = null; if (state.value === 'error') state.value = 'idle'; }
-  onUnmounted(() => { cancelledToken = activeToken; activeToken += 1; recognition?.abort(); recognition = null; });
+  onUnmounted(() => { const current = recognition; cancelledToken = activeToken; activeToken += 1; recognition = null; current?.abort(); });
   return { supported, state, listening, isError, transcript, error, start, stop, reset };
 }

@@ -19,8 +19,10 @@ class MockRecognition {
 describe('useSpeech', () => {
   it('cancels immediately and never submits a cancelled session', () => {
     (window as any).SpeechRecognition = MockRecognition; const onFinal = vi.fn(); let speech!: ReturnType<typeof useSpeech>; const wrapper = mount(defineComponent({ setup: () => { speech = useSpeech(onFinal); return () => h('div'); } }));
-    speech.start(); MockRecognition.latest?.result('取消的内容'); speech.stop();
+    speech.start(); const oldSession = MockRecognition.latest; oldSession?.result('取消的内容'); speech.stop();
+    oldSession?.onerror?.({ error: 'network' }); oldSession?.end();
     expect(speech.listening.value).toBe(false); expect(speech.transcript.value).toBe(''); expect(onFinal).not.toHaveBeenCalled();
+    expect(speech.state.value).toBe('idle'); expect(speech.error.value).toBeNull();
     wrapper.unmount();
   });
   it('submits only when recognition ends naturally', () => {
