@@ -100,3 +100,44 @@ export interface WeeklyReport {
   top: TopProduct[];
   slow: Product[];
 }
+
+export type AgentKind = 'storekeeper' | 'shopping-advisor';
+
+export type CloudModule =
+  | 'llm-gateway'
+  | 'workflow-engine'
+  | 'knowledge-engine'
+  | 'relational-db'
+  | 'collaboration-center';
+
+export type WorkflowEventStatus = 'pending' | 'running' | 'success' | 'failed';
+
+export interface WorkflowEvent {
+  id: string;
+  runId: string;
+  agent: AgentKind;
+  module: CloudModule;
+  action: string;
+  status: WorkflowEventStatus;
+  detail?: string;
+  durationMs?: number;
+  createdAt: string;
+}
+
+export interface AgentRun {
+  id: string;
+  agent: AgentKind;
+  input: string;
+  output?: string;
+  events: WorkflowEvent[];
+  createdAt: string;
+}
+
+export interface KnowledgeHit {
+  id: string;
+  kind: 'product' | 'document' | 'graph';
+  title: string;
+  content: string;
+  score: number;
+  relatedProductIds?: string[];
+}

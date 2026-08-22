@@ -31,6 +31,11 @@
           <ion-icon slot="start" :icon="chatbubbleEllipses" />
           <ion-label>顾客咨询</ion-label>
         </ion-item>
+        <ion-item button router-link="/architecture">
+          <ion-icon slot="start" :icon="layers" />
+          <ion-label>云端架构演示</ion-label>
+          <ion-icon slot="end" :icon="chevronForward" size="small" />
+        </ion-item>
         <ion-item button router-link="/settings">
           <ion-icon slot="start" :icon="settings" />
           <ion-label>门店服务与二维码</ion-label>

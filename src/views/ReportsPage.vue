@@ -84,7 +84,8 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, IonCardH
   IonLabel, IonBadge, IonInput, IonButton, IonIcon, IonNote } from '@ionic/vue';
 import { mic, stop, refresh, send, terminal, bulb } from 'ionicons/icons';
 import { weeklyReport, fmtMoney } from '@/services/report.service';
-import { detectCommand, CommandResult } from '@/services/ai.service';
+import { CommandResult } from '@/services/ai.service';
+import { runStorekeeperWorkflow } from '@/services/agent-orchestrator.service';
 import { useSpeech } from '@/composables/useSpeech';
 import { showToast } from '@/composables/useToast';
 
@@ -112,7 +113,7 @@ function toggleMic() {
 async function runCommand() {
   const text = cmdText.value.trim();
   if (!text) return;
-  const res = await detectCommand(text);
+  const { result: res } = await runStorekeeperWorkflow(text);
   cmdResult.value = res.reply;
   cmdText.value = '';
   if (res.changed) await showToast('价格已更新', 'success');

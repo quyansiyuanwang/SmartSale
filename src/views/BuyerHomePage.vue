@@ -80,8 +80,7 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonCon
   IonInput, IonNote, IonSpinner } from '@ionic/vue';
 import { mic, stop, refresh, send as sendIcon, pricetag, pauseCircle, alertCircle } from 'ionicons/icons';
 import { storeProfile, promotions, loadPublicStore, publicStoreStatus } from '@/services/data';
-import { askBuyerQuestion } from '@/services/ai.service';
-import { addQuery } from '@/services/query.service';
+import { runBuyerWorkflow } from '@/services/agent-orchestrator.service';
 import { useSpeech } from '@/composables/useSpeech';
 
 const tips = ['16mm膨胀螺丝在哪？', '水龙头怎么安装？', '开学文具清单', '100元以内工具箱', '家庭应急药箱'];
@@ -116,9 +115,8 @@ async function send() {
   thinking.value = true;
   chatController = new AbortController();
   try {
-    const reply = await askBuyerQuestion(q, chatController.signal);
+    const { result: reply } = await runBuyerWorkflow(q, chatController.signal);
     msgs.value.push({ role: 'assistant', text: reply.text, source: reply.source });
-    await addQuery(q, reply.text, reply.demo);
   } catch (error) {
     if ((error as DOMException)?.name !== 'AbortError') msgs.value.push({ role: 'assistant', text: error instanceof Error ? error.message : 'AI 服务暂不可用', source: 'error' });
   } finally {

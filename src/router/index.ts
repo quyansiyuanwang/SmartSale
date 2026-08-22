@@ -24,6 +24,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/product/:id', component: () => import('@/views/ProductEditPage.vue') },
   { path: '/alerts', component: () => import('@/views/AlertsPage.vue') },
   { path: '/queries', component: () => import('@/views/QueriesPage.vue') },
+  { path: '/architecture', component: () => import('@/views/ArchitecturePage.vue') },
   { path: '/settings', component: () => import('@/views/SettingsPage.vue') },
   { path: '/buyer', component: () => import('@/views/BuyerHomePage.vue'), meta: { public: true } },
   { path: '/s/:slug', component: () => import('@/views/BuyerHomePage.vue'), meta: { public: true } }
