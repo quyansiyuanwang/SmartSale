@@ -195,6 +195,7 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 
 ## 文档
 
+- 部署、配置、商家与顾客入口、运维和发布说明见 [docs/README.md](docs/README.md)。
 - 立项依据 / 双 Agent 方案详见 `goal/` 目录。
 # 生产环境配置
 
