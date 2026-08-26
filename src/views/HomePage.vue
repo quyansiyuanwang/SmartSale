@@ -36,6 +36,17 @@
         </ion-button>
       </div>
 
+      <ion-card button router-link="/insights" v-if="insights.length" class="opportunity-card">
+        <ion-card-header>
+          <ion-card-title><ion-icon :icon="flash" color="warning" /> 经营机会</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <strong>{{ insights[0].title }}</strong>
+          <p>{{ insights[0].detail }}</p>
+          <div class="more-link">查看 {{ insights.length }} 条待行动建议 →</div>
+        </ion-card-content>
+      </ion-card>
+
       <ion-card button router-link="/alerts" v-if="lowList.length">
         <ion-card-header>
           <ion-card-title><ion-icon :icon="warning" color="danger" /> 库存预警</ion-card-title>
@@ -87,13 +98,15 @@ import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
   IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonCardContent,
   IonList, IonItem, IonLabel, IonBadge } from '@ionic/vue';
-import { storefront, addCircle, chatbubbles, warning, chatbubbleEllipses } from 'ionicons/icons';
+import { storefront, addCircle, chatbubbles, warning, chatbubbleEllipses, flash } from 'ionicons/icons';
 import { storeProfile, queries } from '@/services/data';
 import { todaySummary, lowStock } from '@/services/report.service';
 import { todaySales } from '@/services/sale.service';
+import { businessInsights } from '@/services/insight.service';
 
 const today = computed(() => todaySummary());
 const lowList = computed(() => lowStock());
+const insights = computed(() => businessInsights());
 const todayQueries = computed(() => queries.value.filter((q) => {
   const d = new Date(q.createdAt);
   const now = new Date();

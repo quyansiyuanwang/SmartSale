@@ -4,6 +4,7 @@ import { askBuyerQuestion, detectCommand, CommandResult } from './ai.service';
 import { knowledgeStats, searchKnowledge } from './knowledge.service';
 import { AgentKind, AgentRun, AiReply, CloudModule, KnowledgeHit, WorkflowEvent } from '@/types';
 import { nowISO, uid } from './storage.service';
+import { isDemoMode } from '@/lib/supabase';
 
 export interface WorkflowResult<T> {
   result: T;
@@ -65,7 +66,7 @@ export async function runBuyerWorkflow(question: string, signal?: AbortSignal): 
     return `命中 ${value.length} 条知识，图谱关系 ${stats.graphEdges} 条`;
   });
   const reply = await runStep(run, 'llm-gateway', '生成导购回答', () => askBuyerQuestion(question, signal), (value) => value.demo ? '本地规则 Mock' : '云端大模型');
-  await runStep(run, 'relational-db', '记录顾客咨询', () => addQuery(question, reply.text, reply.demo), () => 'customer_queries 已写入');
+  await runStep(run, 'relational-db', '记录顾客咨询', () => isDemoMode ? addQuery(question, reply.text, reply.demo).then(() => undefined) : Promise.resolve(), () => isDemoMode ? '本地演示咨询已写入' : '云端 Edge Function 已写入');
   await runStep(run, 'collaboration-center', '同步需求到智店管家', () => hits, (value) => `智店管家已收到咨询，关联知识 ${value.length} 条`);
   run.output = reply.text;
   return { result: reply, run };

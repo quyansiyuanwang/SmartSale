@@ -21,6 +21,9 @@ npm install
 # 本地开发（浏览器访问 http://localhost:5173）
 npm run dev
 
+# 本机竞赛 Demo（局域网设备也可访问，不需要 Supabase 或 AI Key）
+npm run demo
+
 # 运行单元测试
 npm test
 

@@ -31,6 +31,11 @@
           <ion-icon slot="start" :icon="chatbubbleEllipses" />
           <ion-label>顾客咨询</ion-label>
         </ion-item>
+        <ion-item button router-link="/insights">
+          <ion-icon slot="start" :icon="flash" />
+          <ion-label>经营机会</ion-label>
+          <ion-icon slot="end" :icon="chevronForward" size="small" />
+        </ion-item>
         <ion-item button router-link="/architecture">
           <ion-icon slot="start" :icon="layers" />
           <ion-label>云端架构演示</ion-label>
@@ -71,7 +76,7 @@
 import { computed } from 'vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonAvatar, IonIcon, IonList,
   IonItem, IonLabel, IonBadge, IonNote, IonButton, alertController } from '@ionic/vue';
-import { storefront, qrCode, chevronForward, warning, chatbubbleEllipses, settings, sparkles, layers, refresh } from 'ionicons/icons';
+import { storefront, qrCode, chevronForward, warning, chatbubbleEllipses, settings, sparkles, layers, refresh, flash } from 'ionicons/icons';
 import { storeProfile } from '@/services/data';
 import { resetAll } from '@/services/data';
 import { hasApiKey } from '@/services/store.service';

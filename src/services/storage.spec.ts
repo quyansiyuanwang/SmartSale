@@ -10,11 +10,13 @@ vi.mock('@capacitor/preferences', () => ({
   }
 }));
 
-import { products } from '@/services/data';
+import { products, promotions, queries } from '@/services/data';
 import { loadAll, resetAll, ensureSeeded } from '@/services/data';
 import { KEYS } from '@/services/storage.service';
 import { createProduct, updateProduct, deleteProduct, listProducts, adjustStock } from '@/services/product.service';
 import { ProductInput } from '@/types';
+import { addQuery, markQueriesFollowed } from '@/services/query.service';
+import { createPromotion } from '@/services/promotion.service';
 
 const input: ProductInput = {
   name: '测试商品', barcode: '999', category: '五金',
@@ -47,6 +49,18 @@ describe('存储与种子数据', () => {
     await resetAll();
     expect(products.value.length).toBe(20);
     expect(products.value.some((p) => p.name === '测试商品')).toBe(false);
+  });
+
+  it('跟进顾客咨询并创建促销会写入本地演示数据', async () => {
+    await loadAll();
+    const query = await addQuery('水龙头在哪', '在 B1-1 货架。', true);
+    await markQueriesFollowed([query.id]);
+    expect(queries.value[0].status).toBe('followed');
+    expect(JSON.parse(store.get(KEYS.queries)!)[0].status).toBe('followed');
+
+    const promotion = await createPromotion({ title: '水龙头 · 顾客推荐', detail: '到店询问享专属优惠。' });
+    expect(promotions.value[0].id).toBe(promotion.id);
+    expect(JSON.parse(store.get(KEYS.promotions)!)[0].title).toBe('水龙头 · 顾客推荐');
   });
 });
 

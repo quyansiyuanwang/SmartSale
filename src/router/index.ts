@@ -5,7 +5,8 @@ import { isDemoMode, hasSupabaseConfig } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
 
 const routes: Array<RouteRecordRaw> = [
-  { path: '/', redirect: '/tabs/home' },
+  { path: '/', redirect: isDemoMode ? '/demo' : '/tabs/home' },
+  { path: '/demo', component: () => import('@/views/DemoLaunchPage.vue'), meta: { public: true } },
   { path: '/login', component: () => import('@/views/LoginPage.vue'), meta: { public: true } },
   { path: '/onboarding', component: () => import('@/views/OnboardingPage.vue') },
   {
@@ -24,6 +25,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/product/:id', component: () => import('@/views/ProductEditPage.vue') },
   { path: '/alerts', component: () => import('@/views/AlertsPage.vue') },
   { path: '/queries', component: () => import('@/views/QueriesPage.vue') },
+  { path: '/insights', component: () => import('@/views/InsightsPage.vue') },
   { path: '/architecture', component: () => import('@/views/ArchitecturePage.vue') },
   { path: '/settings', component: () => import('@/views/SettingsPage.vue') },
   { path: '/buyer', component: () => import('@/views/BuyerHomePage.vue'), meta: { public: true } },

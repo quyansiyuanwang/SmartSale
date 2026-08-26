@@ -19,6 +19,9 @@
               <ion-badge :color="q.demo ? 'warning' : 'primary'" size="small">
                 {{ q.demo ? '演示模式' : 'AI 在线' }}
               </ion-badge>
+              <ion-badge :color="q.status === 'followed' ? 'success' : 'medium'" size="small">
+                {{ q.status === 'followed' ? '已跟进' : '待跟进' }}
+              </ion-badge>
             </div>
             <p class="q-answer">{{ q.answer }}</p>
             <p v-if="q.error" class="q-answer ion-color-danger">服务错误：{{ q.error }}</p>

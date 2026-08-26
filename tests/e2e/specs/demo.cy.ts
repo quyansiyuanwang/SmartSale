@@ -31,3 +31,20 @@ describe('智售引擎竞赛 Demo', () => {
     cy.contains('读取库存/报表数据').should('be.visible');
   });
 });
+
+describe('本地 Demo 双 Agent 闭环', () => {
+  beforeEach(() => {
+    cy.clearLocalStorage();
+    cy.visit('/demo');
+  });
+
+  it('从顾客咨询生成商家经营机会并公开促销', () => {
+    cy.contains('一键运行闭环').click();
+    cy.contains('经营机会').should('be.visible');
+    cy.contains('水龙头').should('be.visible');
+    cy.contains('生成公开促销').click();
+    cy.contains('确认创建').click();
+    cy.visit('/s/demo-store');
+    cy.contains('电工胶带 · 顾客推荐').should('be.visible');
+  });
+});

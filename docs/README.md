@@ -12,6 +12,7 @@
 | 顾客扫码或打开公开链接 | [客户端使用](05-customer-guide.md) |
 | 日常检查、故障定位与回滚 | [运维手册](06-operations.md) |
 | 构建 Android/iOS 与 GitHub Release | [发布手册](07-release.md) |
+| 本机一键运行竞赛 Demo | [本机演示](08-local-demo.md) |
 
 ## 三个正式地址
 

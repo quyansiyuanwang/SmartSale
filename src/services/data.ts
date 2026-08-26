@@ -17,7 +17,7 @@ const productFromRow = (row: any): Product => ({ id: row.id, name: row.name, bar
 const productToRow = (product: Product, storeId: string) => ({ id: product.id.startsWith('p_') ? undefined : product.id, store_id: storeId, name: product.name, barcode: product.barcode, category: product.category, buy_price: product.buyPrice, price: product.price, stock: product.stock, safe_stock: product.safeStock, location: product.location, description: product.desc, updated_at: product.updatedAt });
 const saleFromRow = (row: any): SaleRecord => ({ id: row.id, productId: row.product_id, productName: row.product_name, qty: row.quantity, unitPrice: Number(row.unit_price), cost: Number(row.cost), total: Number(row.total), time: row.created_at });
 const promotionFromRow = (row: any): Promotion => ({ id: row.id, title: row.title, detail: row.detail, active: row.active, createdAt: row.created_at });
-const queryFromRow = (row: any): CustomerQuery => ({ id: row.id, content: row.content, answer: row.answer ?? '', demo: false, createdAt: row.created_at, provider: row.provider, model: row.model, latencyMs: row.latency_ms, sourceDocumentIds: row.source_document_ids ?? [], error: row.error });
+const queryFromRow = (row: any): CustomerQuery => ({ id: row.id, content: row.content, answer: row.answer ?? '', demo: false, createdAt: row.created_at, status: row.status === 'followed' ? 'followed' : 'new', followedAt: row.followed_at ?? null, provider: row.provider, model: row.model, latencyMs: row.latency_ms, sourceDocumentIds: row.source_document_ids ?? [], error: row.error });
 
 export async function ensureSeeded(): Promise<void> {
   if (!isDemoMode) return;

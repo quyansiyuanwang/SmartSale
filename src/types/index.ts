@@ -42,6 +42,8 @@ export interface CustomerQuery {
   answer: string;
   demo: boolean;
   createdAt: string;
+  status: 'new' | 'followed';
+  followedAt?: string | null;
   provider?: string | null;
   model?: string | null;
   latencyMs?: number | null;
@@ -55,6 +57,23 @@ export interface Promotion {
   detail: string;
   active: boolean;
   createdAt: string;
+}
+
+export interface PromotionInput {
+  title: string;
+  detail: string;
+  active?: boolean;
+}
+
+export interface BusinessInsight {
+  id: string;
+  kind: 'restock' | 'promotion' | 'follow-up';
+  title: string;
+  detail: string;
+  productId?: string;
+  productName?: string;
+  queryIds: string[];
+  actionLabel: string;
 }
 
 export interface LlmConfig {
