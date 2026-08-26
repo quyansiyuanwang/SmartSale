@@ -12,6 +12,20 @@
       <ion-toolbar>
         <ion-searchbar v-model="search" placeholder="搜索商品名称 / 输入条码" />
       </ion-toolbar>
+      <ion-toolbar class="list-controls-toolbar">
+        <div class="list-controls">
+          <ion-segment v-model="stockFilter" class="compact-segment" aria-label="销售选品库存筛选">
+            <ion-segment-button value="all"><ion-label>全部</ion-label></ion-segment-button>
+            <ion-segment-button value="available"><ion-label>有货</ion-label></ion-segment-button>
+            <ion-segment-button value="low"><ion-label>库存预警</ion-label></ion-segment-button>
+          </ion-segment>
+          <ion-select v-model="sortBy" interface="popover" aria-label="销售选品排序" class="list-select">
+            <ion-select-option value="name">名称 A-Z</ion-select-option>
+            <ion-select-option value="stockAsc">库存由低到高</ion-select-option>
+            <ion-select-option value="priceAsc">售价由低到高</ion-select-option>
+          </ion-select>
+        </div>
+      </ion-toolbar>
     </ion-header>
 
     <ion-content :fullscreen="true" class="ion-padding">
@@ -72,7 +86,7 @@ import { computed, ref } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonSearchbar, IonContent, IonList, IonItem,
   IonLabel, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonInput,
-  IonButton, IonIcon, IonNote } from '@ionic/vue';
+  IonButton, IonIcon, IonNote, IonSegment, IonSegmentButton, IonSelect, IonSelectOption } from '@ionic/vue';
 import { arrowBack, checkmark } from 'ionicons/icons';
 import { Product } from '@/types';
 import { listProducts } from '@/services/product.service';
@@ -85,14 +99,26 @@ const selected = ref<Product | null>(null);
 const qty = ref(1);
 const saving = ref(false);
 const todayList = ref(todaySales());
+const stockFilter = ref<'all' | 'available' | 'low'>('all');
+const sortBy = ref<'name' | 'stockAsc' | 'priceAsc'>('name');
 
 const filtered = computed(() => {
   const kw = search.value.trim();
-  if (!kw) return listProducts();
-  const byName = listProducts(kw);
-  if (byName.length) return byName;
-  const p = listProducts().find((x) => x.barcode === kw);
-  return p ? [p] : [];
+  const matches = !kw ? listProducts() : (() => {
+    const byName = listProducts(kw);
+    if (byName.length) return byName;
+    const product = listProducts().find((item) => item.barcode === kw);
+    return product ? [product] : [];
+  })();
+  return matches
+    .filter((product) => stockFilter.value === 'all'
+      || (stockFilter.value === 'available' && product.stock > 0)
+      || (stockFilter.value === 'low' && product.stock <= product.safeStock))
+    .sort((a, b) => {
+      if (sortBy.value === 'stockAsc') return a.stock - b.stock || a.name.localeCompare(b.name, 'zh-CN');
+      if (sortBy.value === 'priceAsc') return a.price - b.price || a.name.localeCompare(b.name, 'zh-CN');
+      return a.name.localeCompare(b.name, 'zh-CN');
+    });
 });
 const total = computed(() => qty.value * (selected.value?.price ?? 0));
 

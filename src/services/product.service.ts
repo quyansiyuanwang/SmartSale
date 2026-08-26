@@ -53,6 +53,12 @@ export async function deleteProduct(id: string): Promise<void> {
   if (isDemoMode) await persistProducts();
 }
 
+export async function deleteProducts(ids: string[]): Promise<void> {
+  const uniqueIds = [...new Set(ids)];
+  if (!uniqueIds.length) return;
+  for (const id of uniqueIds) await deleteProduct(id);
+}
+
 export async function adjustStock(id: string, delta: number): Promise<Product | undefined> {
   const p = products.value.find((x) => x.id === id);
   if (!p) return undefined;

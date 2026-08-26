@@ -13,7 +13,7 @@ vi.mock('@capacitor/preferences', () => ({
 import { products, promotions, queries } from '@/services/data';
 import { loadAll, resetAll, ensureSeeded } from '@/services/data';
 import { KEYS } from '@/services/storage.service';
-import { createProduct, updateProduct, deleteProduct, listProducts, adjustStock } from '@/services/product.service';
+import { createProduct, updateProduct, deleteProduct, deleteProducts, listProducts, adjustStock } from '@/services/product.service';
 import { ProductInput } from '@/types';
 import { addQuery, markQueriesFollowed } from '@/services/query.service';
 import { createPromotion } from '@/services/promotion.service';
@@ -79,5 +79,17 @@ describe('商品服务', () => {
 
     await deleteProduct(p.id);
     expect(products.value.some((x) => x.id === p.id)).toBe(false);
+  });
+
+  it('批量删除会同步商品列表与本地存储', async () => {
+    await loadAll();
+    const first = await createProduct({ ...input, barcode: 'batch-1' });
+    const second = await createProduct({ ...input, barcode: 'batch-2', name: '第二个测试商品' });
+
+    await deleteProducts([first.id, second.id, first.id]);
+
+    expect(products.value.some((product) => product.id === first.id || product.id === second.id)).toBe(false);
+    const persisted = JSON.parse(store.get(KEYS.products)!) as ProductInput[];
+    expect(persisted.some((product) => product.barcode === 'batch-1' || product.barcode === 'batch-2')).toBe(false);
   });
 });
