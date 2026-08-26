@@ -42,12 +42,12 @@ npx supabase secrets set `
   EMBEDDING_API_KEY="<embedding-api-key>" `
   EMBEDDING_BASE_URL="<embedding-api-base-url>" `
   EMBEDDING_MODEL="<embedding-model-name>" `
-  ALLOWED_ORIGIN="https://app.example.com"
+  ALLOWED_ORIGINS="https://app.example.com,https://localhost"
 ```
 
 托管 Supabase Edge Runtime 会提供 `SUPABASE_URL`、`SUPABASE_ANON_KEY` 和 `SUPABASE_SERVICE_ROLE_KEY`；不要将后两者中的 service role 值配置为前端变量。当前默认建店逻辑使用 DeepSeek。若要使用 `openai-compatible` 模型配置，还必须设置 `OPENAI_COMPATIBLE_API_KEY` 和 `OPENAI_COMPATIBLE_BASE_URL`。
 
-`ALLOWED_ORIGIN` 是当前函数实现支持的单个 Origin。只发布 Web/PWA 时应设置正式域名；需要同时调试多个浏览器 Origin 或 Capacitor 原生壳时，先评估 CORS 改造，不能以逗号分隔多个域名。
+`ALLOWED_ORIGINS` 是 Function 的精确 Origin 白名单。正式 Web 域名必须在列表中；商家 Android App 使用 Capacitor 的 `https://localhost`，也必须保留。不要配置 `*` 作为生产白名单。
 
 ## 4. 部署 Edge Functions
 

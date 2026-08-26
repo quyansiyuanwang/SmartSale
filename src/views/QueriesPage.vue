@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonButton,
   IonContent, IonList, IonItem, IonLabel, IonBadge, IonCheckbox, IonSegment, IonSegmentButton, IonSelect, IonSelectOption,
@@ -121,6 +121,10 @@ async function followSelected() {
     await showToast(error instanceof Error ? error.message : '更新失败', 'danger');
   }
 }
+
+watch([statusFilter, sortBy], () => {
+  selectedIds.value = new Set();
+});
 
 function fullText(iso: string): string {
   const d = new Date(iso);

@@ -18,7 +18,7 @@
       </div>
 
       <ion-list inset>
-        <ion-item button router-link="/buyer">
+        <ion-item button :router-link="customerEntry">
           <ion-icon slot="start" :icon="qrCode" />
           <ion-label>顾客端入口（智购顾问）</ion-label>
           <ion-icon slot="end" :icon="chevronForward" size="small" />
@@ -82,9 +82,13 @@ import { resetAll } from '@/services/data';
 import { hasApiKey } from '@/services/store.service';
 import { isDemoMode } from '@/lib/supabase';
 import { showToast } from '@/composables/useToast';
+import { useAuth } from '@/composables/useAuth';
+import { publicStoreUrl } from '@/lib/platform-config';
 
-const hasKey = computed(() => hasApiKey());
+const hasKey = computed(() => !isDemoMode || hasApiKey());
 const productionStorage = !isDemoMode;
+const { currentStore } = useAuth();
+const customerEntry = computed(() => isDemoMode ? '/s/demo-store' : publicStoreUrl(currentStore.value?.slug || ''));
 
 async function confirmReset() {
   const alert = await alertController.create({

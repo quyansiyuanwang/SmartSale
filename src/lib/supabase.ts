@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getPlatformConfig } from './platform-config';
 
 export let hasSupabaseConfig = false;
-export let isDemoMode = true;
+export let isDemoMode = false;
 export let supabase: SupabaseClient | null = null;
 
 export function configureSupabase(): void {

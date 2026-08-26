@@ -21,14 +21,14 @@ async function extractText(bytes: ArrayBuffer, mime: string): Promise<string> {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(request) });
   const client = createClient(url, anon, { global: { headers: { Authorization: request.headers.get('Authorization') ?? '' } } });
-  const { data: { user } } = await client.auth.getUser(); if (!user) return json({ error: 'unauthorized' }, 401);
+  const { data: { user } } = await client.auth.getUser(); if (!user) return json({ error: 'unauthorized' }, 401, request);
   let documentId: string | null = null;
   try {
-    const body = await request.json(); documentId = typeof body.documentId === 'string' ? body.documentId : null; if (!documentId) return json({ error: 'invalid_request' }, 400);
-    const { data: document, error } = await admin.from('knowledge_documents').select('*').eq('id', documentId).single(); if (error || !document) return json({ error: 'not_found' }, 404);
-    const { data: member } = await admin.from('store_members').select('role').eq('store_id', document.store_id).eq('user_id', user.id).single(); if (!member || !['owner', 'manager'].includes(member.role)) return json({ error: 'forbidden' }, 403);
+    const body = await request.json(); documentId = typeof body.documentId === 'string' ? body.documentId : null; if (!documentId) return json({ error: 'invalid_request' }, 400, request);
+    const { data: document, error } = await admin.from('knowledge_documents').select('*').eq('id', documentId).single(); if (error || !document) return json({ error: 'not_found' }, 404, request);
+    const { data: member } = await admin.from('store_members').select('role').eq('store_id', document.store_id).eq('user_id', user.id).single(); if (!member || !['owner', 'manager'].includes(member.role)) return json({ error: 'forbidden' }, 403, request);
     await admin.from('knowledge_documents').update({ status: 'processing', error: null }).eq('id', documentId);
     const { data: file, error: fileError } = await admin.storage.from('knowledge').download(document.storage_path); if (fileError || !file) throw new Error(fileError?.message ?? 'File unavailable');
     const text = await extractText(await file.arrayBuffer(), document.mime_type); const chunks = chunkText(text); if (!chunks.length) throw new Error('No readable text found in document');
@@ -37,6 +37,6 @@ Deno.serve(async (request) => {
     const { error: insertError } = await admin.from('knowledge_chunks').insert(rows); if (insertError) throw insertError;
     await admin.from('knowledge_documents').update({ status: 'draft', error: null }).eq('id', documentId);
     await admin.from('audit_events').insert({ store_id: document.store_id, actor_id: user.id, action: 'knowledge.ingested', entity_type: 'knowledge_document', entity_id: documentId, metadata: { chunks: chunks.length } });
-    return json({ status: 'draft', chunks: chunks.length });
-  } catch (error) { if (documentId) await admin.from('knowledge_documents').update({ status: 'failed', error: error instanceof Error ? error.message : 'Unknown ingest error' }).eq('id', documentId); return json({ error: 'ingest_failed', message: error instanceof Error ? error.message : 'unknown_error' }, 500); }
+    return json({ status: 'draft', chunks: chunks.length }, 200, request);
+  } catch (error) { if (documentId) await admin.from('knowledge_documents').update({ status: 'failed', error: error instanceof Error ? error.message : 'Unknown ingest error' }).eq('id', documentId); return json({ error: 'ingest_failed', message: error instanceof Error ? error.message : 'unknown_error' }, 500, request); }
 });

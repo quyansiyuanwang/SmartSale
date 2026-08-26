@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonSearchbar, IonContent, IonList, IonItem,
   IonThumbnail, IonLabel, IonBadge, IonIcon, IonCheckbox, IonSegment, IonSegmentButton, IonSelect, IonSelectOption,
@@ -129,6 +129,10 @@ function toggleAllVisible() {
   else filtered.value.forEach((product) => next.add(product.id));
   selectedIds.value = next;
 }
+
+watch([search, stockFilter, categoryFilter], () => {
+  selectedIds.value = new Set();
+});
 
 async function confirmDeleteSelected() {
   const count = selectedIds.value.size;

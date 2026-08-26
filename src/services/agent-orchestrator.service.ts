@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 import { addQuery } from './query.service';
-import { askBuyerQuestion, detectCommand, CommandResult } from './ai.service';
+import { askBuyerQuestion, detectCommand, CommandResult, BuyerChatMessage } from './ai.service';
 import { knowledgeStats, searchKnowledge } from './knowledge.service';
 import { AgentKind, AgentRun, AiReply, CloudModule, KnowledgeHit, WorkflowEvent } from '@/types';
 import { nowISO, uid } from './storage.service';
@@ -58,14 +58,14 @@ function classifyQuestion(question: string): string {
   return '商品查询';
 }
 
-export async function runBuyerWorkflow(question: string, signal?: AbortSignal): Promise<WorkflowResult<AiReply>> {
+export async function runBuyerWorkflow(question: string, signal?: AbortSignal, messages: BuyerChatMessage[] = []): Promise<WorkflowResult<AiReply>> {
   const run = startRun('shopping-advisor', question);
   await runStep(run, 'workflow-engine', '识别顾客意图', () => classifyQuestion(question), (value) => `意图：${value}`);
   const hits = await runStep(run, 'knowledge-engine', '检索商品、文档与图谱', () => searchKnowledge(question), (value) => {
     const stats = knowledgeStats(question);
     return `命中 ${value.length} 条知识，图谱关系 ${stats.graphEdges} 条`;
   });
-  const reply = await runStep(run, 'llm-gateway', '生成导购回答', () => askBuyerQuestion(question, signal), (value) => value.demo ? '本地规则 Mock' : '云端大模型');
+  const reply = await runStep(run, 'llm-gateway', '生成导购回答', () => askBuyerQuestion(question, signal, messages), (value) => value.source === 'ai' ? (value.demo ? 'Demo AI 代理' : '云端大模型') : '本地规则回答');
   await runStep(run, 'relational-db', '记录顾客咨询', () => isDemoMode ? addQuery(question, reply.text, reply.demo).then(() => undefined) : Promise.resolve(), () => isDemoMode ? '本地演示咨询已写入' : '云端 Edge Function 已写入');
   await runStep(run, 'collaboration-center', '同步需求到智店管家', () => hits, (value) => `智店管家已收到咨询，关联知识 ${value.length} 条`);
   run.output = reply.text;

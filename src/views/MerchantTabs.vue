@@ -3,7 +3,7 @@
     <aside class="merchant-sidebar">
       <div class="sidebar-brand"><span class="brand-mark">S</span><span>智售引擎</span></div>
       <nav aria-label="管理导航">
-        <a v-for="item in navItems" :key="item.path" :href="item.path" class="sidebar-link"><ion-icon :icon="item.icon" /><span>{{ item.label }}</span></a>
+        <router-link v-for="item in navItems" :key="item.path" :to="item.path" class="sidebar-link"><ion-icon :icon="item.icon" /><span>{{ item.label }}</span></router-link>
       </nav>
       <div class="sidebar-foot">门店运营后台</div>
     </aside>

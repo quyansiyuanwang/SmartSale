@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title>{{ storeProfile.name }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button router-link="/buyer" color="primary">
+          <ion-button :router-link="customerEntry" color="primary">
             <ion-icon slot="start" :icon="storefront" />
             顾客端
           </ion-button>
@@ -31,7 +31,7 @@
         <ion-button expand="block" router-link="/tabs/sales" color="primary">
           <ion-icon slot="start" :icon="addCircle" />录入销售
         </ion-button>
-        <ion-button expand="block" fill="outline" router-link="/buyer">
+        <ion-button expand="block" fill="outline" :router-link="customerEntry">
           <ion-icon slot="start" :icon="chatbubbles" />进入智购顾问
         </ion-button>
       </div>
@@ -103,6 +103,9 @@ import { storeProfile, queries } from '@/services/data';
 import { todaySummary, lowStock } from '@/services/report.service';
 import { todaySales } from '@/services/sale.service';
 import { businessInsights } from '@/services/insight.service';
+import { useAuth } from '@/composables/useAuth';
+import { isDemoMode } from '@/lib/supabase';
+import { publicStoreUrl } from '@/lib/platform-config';
 
 const today = computed(() => todaySummary());
 const lowList = computed(() => lowStock());
@@ -112,6 +115,8 @@ const todayQueries = computed(() => queries.value.filter((q) => {
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }));
+const { currentStore } = useAuth();
+const customerEntry = computed(() => isDemoMode ? '/s/demo-store' : publicStoreUrl(currentStore.value?.slug || ''));
 
 function todayText(): string {
   const d = new Date();

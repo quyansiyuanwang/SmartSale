@@ -5,7 +5,7 @@
 
 「智售引擎」首期 MVP 包含两个入口，同一份本地数据、同一条业务闭环：
 
-- **智店管家（商家端）**：经营概览、商品管理、销售录入（自动扣库存）、库存预警、滞销分析、周经营报表、语音指令、顾客需求看板、AI 配置。
+- **智店管家（商家端）**：Android App/PWA 管理后台，提供经营概览、商品管理、销售录入、库存预警、经营报表和顾客需求看板。
 - **智购顾问（买家端）**：扫码即用入口、找货问答（货架/价格/替代品）、知识库问答、场景化清单推荐（装修/开学文具/家庭药箱/百元工具）、当前促销展示。
 
 买家咨询（找货/问答）会实时写入商家「顾客需求」看板，形成「录入销售 → 库存变化 → 顾客问答 → 商家响应」的完整闭环。
@@ -151,17 +151,11 @@ smart-sale/
 
 ---
 
-## AI 接入说明（DeepSeek）
+## AI 服务
 
-1. 进入商家端 **「更多 → AI 设置」**，填写：
-   - `API Key`：DeepSeek 平台申请的密钥（仅保存于本机 Preferences，`type=password`）。
-   - `Base URL`：默认 `https://api.deepseek.com`
-   - `Model`：默认 `deepseek-chat`
-   - 超时：默认 30 秒
-2. 保存后，买家端问答与商家端语音指令均调用 DeepSeek。
-3. **未配置 Key / 调用失败 / 超时**时自动降级为本地规则回复，并标注「演示模式」徽标，功能仍可用（关键词匹配商品、货架、价格、场景清单、知识库）。
+生产环境的顾客问答经 Supabase `ai-chat` Edge Function 调用平台托管模型，供应商 Key 只保存在 Function Secrets。商家 App 和顾客浏览器均不保存模型 Key。
 
-> ⚠️ **安全说明（MVP）**：API Key 仅本地存储，无服务端中转、无加密，属于 MVP 演示级别，请勿在生产环境直接使用。
+`npm run demo` 默认使用本地规则导购。复制 `.env.demo.local.example` 为 `.env.demo.local` 并填写 `DEMO_AI_*` 后，Demo 会通过本机 Vite 代理接入真实 AI；密钥不会进入浏览器包，调用失败时自动回退规则回答。
 
 ### 支持的语音指令（Web Speech API，Chrome/Edge）
 
@@ -191,8 +185,8 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 
 ## 已知限制（MVP）
 
-- 单店铺、无登录 / 权限体系；多员工、会员、积分等不在本次范围。
-- 数据仅存本地单机（`@capacitor/preferences`），不引入 SQLite / 后端；数据层为仓储式接口，后续可平滑替换。
+- 商家通过 Supabase Auth 登录，数据按门店 RLS 隔离；多员工切换、会员和支付不在本次范围。
+- 本机 Demo 使用 Capacitor Preferences；生产数据使用 Supabase Postgres、Auth、Storage 与 Edge Functions。
 - 买家端以 Web/PWA 替代微信小程序（Capacitor 不支持小程序）。
 - Android / iOS 原生包由 GitHub Actions 构建：Android 使用 Ubuntu runner，iOS 使用 macOS runner；本地 iOS 构建仍需 macOS 与 Xcode。
 
@@ -204,9 +198,7 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 
 ### 简化配置
 
-本机开发可以运行 `npm run db:start`（需要 Docker Desktop），然后在管理端「店铺与服务设置」填写 Supabase URL、Anon Key 和 AI API Key。默认本机数据库地址是 `http://127.0.0.1:54321`，Anon Key 可通过 `npm run db:status` 查看。远端项目同样只需填写项目 URL 与 anon key，保存后页面会刷新并连接对应数据库。
-
-本机模式的 AI Key 会保存到当前设备的 Capacitor Preferences，适合开发和内网使用。公开生产环境不要让顾客设备持有供应商 Key，应使用 `ai-chat` Edge Function Secrets。
+本机开发可以运行 `npm run db:start`（需要 Docker Desktop）。将 URL 与 Anon Key 写入未提交的 `.env.local` 后运行 `npm run dev`；平台模型 Key 只配置到 Edge Function Secrets。
 
 生产模式使用 Supabase Postgres、Auth、Storage 和 Edge Functions。复制 `.env.example` 到本地环境并填写 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`；不要把供应商密钥写入前端环境变量。
 

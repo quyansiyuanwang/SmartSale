@@ -2,6 +2,8 @@
 
 本项目可以不配置 Supabase、AI Key 或公网域名完成完整 Demo。默认使用本地种子门店、商品、销售数据和规则型导购回答。
 
+需要真实 AI 时，复制 `.env.demo.local.example` 为 `.env.demo.local`，填写 `DEMO_AI_BASE_URL`、`DEMO_AI_API_KEY`、`DEMO_AI_MODEL`，再运行同一条 `npm run demo`。Key 只保存在运行 Vite 的电脑，不会发给局域网内的顾客浏览器；未配置或调用失败时会自动回退为本地规则回答。
+
 ## 启动
 
 ```powershell

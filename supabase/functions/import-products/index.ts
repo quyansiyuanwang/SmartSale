@@ -8,18 +8,18 @@ function text(value: unknown, max = 500): string { return typeof value === 'stri
 function number(value: unknown, fallback = 0): number { const parsed = typeof value === 'number' ? value : Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(request) });
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, request);
   try {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-    if (!token) return json({ error: 'unauthorized' }, 401);
+    if (!token) return json({ error: 'unauthorized' }, 401, request);
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${token}` } } });
     const { data: auth } = await client.auth.getUser();
-    if (!auth.user) return json({ error: 'unauthorized' }, 401);
+    if (!auth.user) return json({ error: 'unauthorized' }, 401, request);
     const body = await request.json(); const rows = Array.isArray(body.products) ? body.products : [];
-    if (!rows.length || rows.length > 1000) return json({ error: 'invalid_product_count' }, 400);
+    if (!rows.length || rows.length > 1000) return json({ error: 'invalid_product_count' }, 400, request);
     const { data: membership } = await admin.from('store_members').select('store_id,role').eq('user_id', auth.user.id).in('role', ['owner', 'manager']).limit(1).maybeSingle();
-    if (!membership) return json({ error: 'not_permitted' }, 403);
+    if (!membership) return json({ error: 'not_permitted' }, 403, request);
     const errors: Array<{ row: number; message: string }> = []; const seenBarcodes = new Set<string>();
     const normalized = rows.map((raw: ProductInput, index: number) => {
       const name = text(raw.name, 160); const barcode = text(raw.barcode, 120); const price = number(raw.price, NaN); const buyPrice = number(raw.buyPrice); const stock = number(raw.stock); const safeStock = number(raw.safeStock);
@@ -29,11 +29,11 @@ Deno.serve(async (request) => {
       if (barcode && seenBarcodes.has(barcode)) errors.push({ row: index + 2, message: '文件内条码重复' }); seenBarcodes.add(barcode);
       return { store_id: membership.store_id, name, barcode, category: text(raw.category, 80), buy_price: buyPrice, price, stock, safe_stock: safeStock, location: text(raw.location, 120), description: text(raw.desc, 2000) };
     });
-    if (errors.length) return json({ error: 'validation_failed', errors }, 422);
+    if (errors.length) return json({ error: 'validation_failed', errors }, 422, request);
     const barcodes = normalized.map((item) => item.barcode).filter(Boolean);
-    if (barcodes.length) { const { data: existing } = await admin.from('products').select('barcode').eq('store_id', membership.store_id).in('barcode', barcodes); if (existing?.length) return json({ error: 'validation_failed', errors: existing.map((item) => ({ row: 0, message: `条码 ${item.barcode} 已存在` })) }, 422); }
+    if (barcodes.length) { const { data: existing } = await admin.from('products').select('barcode').eq('store_id', membership.store_id).in('barcode', barcodes); if (existing?.length) return json({ error: 'validation_failed', errors: existing.map((item) => ({ row: 0, message: `条码 ${item.barcode} 已存在` })) }, 422, request); }
     const { data, error } = await admin.from('products').insert(normalized).select('id'); if (error) throw error;
     await admin.from('audit_events').insert({ store_id: membership.store_id, actor_id: auth.user.id, action: 'product.imported', entity_type: 'product', metadata: { count: data?.length ?? 0 } });
-    return json({ imported: data?.length ?? 0 });
-  } catch (error) { console.error('product import failed', error); return json({ error: 'import_unavailable', message: error instanceof Error ? error.message : 'unknown_error' }, 503); }
+    return json({ imported: data?.length ?? 0 }, 200, request);
+  } catch (error) { console.error('product import failed', error); return json({ error: 'import_unavailable', message: error instanceof Error ? error.message : 'unknown_error' }, 503, request); }
 });

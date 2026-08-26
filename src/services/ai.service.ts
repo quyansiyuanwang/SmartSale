@@ -84,13 +84,15 @@ function activePromotions(): string {
     .join('；');
 }
 
-async function callGateway(question: string, signal?: AbortSignal): Promise<string> {
+export interface BuyerChatMessage { role: 'user' | 'assistant'; text: string; }
+
+async function callGateway(question: string, signal?: AbortSignal, messages: BuyerChatMessage[] = []): Promise<string> {
   if (!supabase) throw new Error('AI 服务尚未配置');
   const pathSlug = window.location.pathname.match(/^\/s\/([^/]+)$/)?.[1];
   const slug = useAuth().currentStore.value?.slug || pathSlug || new URLSearchParams(window.location.search).get('store');
   if (!slug) throw new Error('未指定公开门店');
   const { supabaseUrl, supabaseAnonKey } = getPlatformConfig();
-  const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey }, body: JSON.stringify({ slug, question }), signal });
+  const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey }, body: JSON.stringify({ slug, question, messages: messages.slice(-6).map((message) => ({ role: message.role, content: message.text })) }), signal });
   if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'store_suspended' ? '门店服务已暂停' : data?.error === 'ai_not_configured' ? '平台 AI 服务暂不可用' : 'AI 服务暂不可用，请稍后重试'); }
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let answer = '';
   let complete = false;
@@ -98,10 +100,34 @@ async function callGateway(question: string, signal?: AbortSignal): Promise<stri
   if (!answer.trim()) throw new Error('AI 服务未返回内容'); return answer.trim();
 }
 
-export async function askBuyerQuestion(question: string, signal?: AbortSignal): Promise<AiReply> {
+async function callDemoGateway(question: string, signal?: AbortSignal, messages: BuyerChatMessage[] = []): Promise<string> {
+  const context = {
+    catalog: products.value.slice(0, 200).map((product) => ({ name: product.name, category: product.category, price: product.price, stock: product.stock, location: product.location, description: product.desc })),
+    promotions: promotions.value.filter((promotion) => promotion.active).map((promotion) => ({ title: promotion.title, detail: promotion.detail }))
+  };
+  const response = await fetch('/__demo/ai-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, context, messages: messages.slice(-6) }),
+    signal
+  });
+  if (!response.ok) throw new Error('Demo AI 代理不可用');
+  const payload = await response.json() as { text?: string };
+  if (!payload.text?.trim()) throw new Error('Demo AI 未返回内容');
+  return payload.text.trim();
+}
+
+export async function askBuyerQuestion(question: string, signal?: AbortSignal, messages: BuyerChatMessage[] = []): Promise<AiReply> {
   const q = question.trim();
   if (!q) return { text: '请先告诉我您想找什么，比如「16mm膨胀螺丝在哪」。', demo: true, source: 'local' };
-  if (!isDemoMode) return { text: await callGateway(q, signal), demo: false, source: 'ai' };
+  if (!isDemoMode) return { text: await callGateway(q, signal, messages), demo: false, source: 'ai' };
+  if (getPlatformConfig().demoAiEnabled) {
+    try {
+      return { text: await callDemoGateway(q, signal, messages), demo: true, source: 'ai' };
+    } catch (error) {
+      if ((error as DOMException)?.name === 'AbortError') throw error;
+    }
+  }
   return fallbackAnswer(q);
 }
 
