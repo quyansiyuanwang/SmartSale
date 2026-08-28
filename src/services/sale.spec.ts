@@ -24,8 +24,17 @@ describe('销售服务：扣库存与记录', () => {
     expect(res.sale!.total).toBe(4);
     expect(res.sale!.productName).toBe('电工胶带');
     expect(products.value[0].stock).toBe(3);
+    expect(res.lowStockProduct).toBeUndefined();
     expect(sales.value.length).toBe(1);
     expect(todaySales().length).toBe(1);
+  });
+
+  it('销售使库存降到安全线时返回低库存提醒信息', async () => {
+    await recordSale('p1', 1);
+    const res = await recordSale('p1', 2);
+    expect(res.ok).toBe(true);
+    expect(products.value[0].stock).toBe(2);
+    expect(res.lowStockProduct).toEqual({ productId: 'p1', name: '电工胶带', stock: 2, safeStock: 2 });
   });
 
   it('库存不足时拒绝销售', async () => {

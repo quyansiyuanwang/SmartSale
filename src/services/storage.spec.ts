@@ -10,13 +10,14 @@ vi.mock('@capacitor/preferences', () => ({
   }
 }));
 
-import { products, promotions, queries } from '@/services/data';
+import { products, promotions, queries, loadPublicStore, publicStoreStatus } from '@/services/data';
 import { loadAll, resetAll, ensureSeeded } from '@/services/data';
 import { KEYS } from '@/services/storage.service';
-import { createProduct, updateProduct, deleteProduct, deleteProducts, listProducts, adjustStock } from '@/services/product.service';
+import { createProduct, updateProduct, deleteProduct, deleteProducts, listProducts, adjustStock, findProductByBarcode } from '@/services/product.service';
 import { ProductInput } from '@/types';
 import { addQuery, markQueriesFollowed } from '@/services/query.service';
-import { createPromotion } from '@/services/promotion.service';
+import { createPromotion, setPromotionActive, deletePromotion } from '@/services/promotion.service';
+import { loadPublicServiceSettings, savePublicServiceSettings } from '@/services/store.service';
 
 const input: ProductInput = {
   name: '测试商品', barcode: '999', category: '五金',
@@ -62,6 +63,42 @@ describe('存储与种子数据', () => {
     expect(promotions.value[0].id).toBe(promotion.id);
     expect(JSON.parse(store.get(KEYS.promotions)!)[0].title).toBe('水龙头 · 顾客推荐');
   });
+
+  it('促销启停与删除会同步到本地演示数据', async () => {
+    await loadAll();
+    const promotion = await createPromotion({ title: '限时 9 折', detail: '原价 10 → 9 元。' });
+    const persistedPromotions = () => JSON.parse(store.get(KEYS.promotions)!) as Array<{ id: string; active: boolean }>;
+
+    await setPromotionActive(promotion.id, false);
+    expect(promotions.value.find((p) => p.id === promotion.id)!.active).toBe(false);
+    expect(persistedPromotions().find((p) => p.id === promotion.id)?.active).toBe(false);
+
+    await setPromotionActive(promotion.id, true);
+    expect(promotions.value.find((p) => p.id === promotion.id)!.active).toBe(true);
+
+    await deletePromotion(promotion.id);
+    expect(promotions.value.some((p) => p.id === promotion.id)).toBe(false);
+    expect(persistedPromotions().some((p) => p.id === promotion.id)).toBe(false);
+  });
+
+  it('演示模式支持暂停公开服务并在顾客端生效，重置后恢复', async () => {
+    await loadAll();
+    await savePublicServiceSettings({ serviceStatus: 'active', publicEnabled: false });
+    expect((await loadPublicServiceSettings()).publicEnabled).toBe(false);
+
+    await loadPublicStore('demo-store');
+    expect(publicStoreStatus.value).toBe('suspended');
+
+    await savePublicServiceSettings({ serviceStatus: 'active', publicEnabled: true });
+    await loadPublicStore('demo-store');
+    expect(publicStoreStatus.value).toBe('active');
+
+    await savePublicServiceSettings({ serviceStatus: 'active', publicEnabled: false });
+    await resetAll();
+    expect((await loadPublicServiceSettings()).publicEnabled).toBe(true);
+    await loadPublicStore('demo-store');
+    expect(publicStoreStatus.value).toBe('active');
+  });
 });
 
 describe('商品服务', () => {
@@ -79,6 +116,15 @@ describe('商品服务', () => {
 
     await deleteProduct(p.id);
     expect(products.value.some((x) => x.id === p.id)).toBe(false);
+  });
+
+  it('条码精确匹配已建档商品', async () => {
+    await loadAll();
+    const seeded = products.value.find((p) => p.barcode === '6900000000028')!;
+    expect(findProductByBarcode('6900000000028')?.id).toBe(seeded.id);
+    expect(findProductByBarcode(' 6900000000028 ')?.id).toBe(seeded.id);
+    expect(findProductByBarcode('000')).toBeUndefined();
+    expect(findProductByBarcode('')).toBeUndefined();
   });
 
   it('批量删除会同步商品列表与本地存储', async () => {

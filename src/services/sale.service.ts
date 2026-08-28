@@ -7,6 +7,14 @@ export interface SaleResult {
   ok: boolean;
   sale?: SaleRecord;
   error?: string;
+  /** 本次销售后库存降到安全线及以下的商品，供界面/语音播报提醒补货 */
+  lowStockProduct?: { productId: string; name: string; stock: number; safeStock: number };
+}
+
+function lowStockCheck(productId: string): SaleResult['lowStockProduct'] {
+  const p = products.value.find((x) => x.id === productId);
+  if (!p || p.stock > p.safeStock) return undefined;
+  return { productId: p.id, name: p.name, stock: p.stock, safeStock: p.safeStock };
 }
 
 export async function recordSale(productId: string, qty: number): Promise<SaleResult> {
@@ -21,7 +29,7 @@ export async function recordSale(productId: string, qty: number): Promise<SaleRe
       p.stock -= qty;
       p.updatedAt = nowISO();
       sales.value.unshift(sale);
-      return { ok: true, sale };
+      return { ok: true, sale, lowStockProduct: lowStockCheck(productId) };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : '销售保存失败' };
     }
@@ -41,7 +49,7 @@ export async function recordSale(productId: string, qty: number): Promise<SaleRe
   };
   sales.value.unshift(sale);
   await Promise.all([persistProducts(), persistSales()]);
-  return { ok: true, sale };
+  return { ok: true, sale, lowStockProduct: lowStockCheck(productId) };
 }
 
 export async function recordSaleByBarcode(barcode: string, qty: number): Promise<SaleResult> {

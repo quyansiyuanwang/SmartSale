@@ -23,11 +23,16 @@
       <section class="buyer-catalog" aria-label="商品浏览">
         <div class="buyer-section-head"><h2>店内商品</h2><span>{{ visibleProducts.length }} 项</span></div>
         <ion-searchbar v-model="productSearch" placeholder="搜索商品、分类或货架" />
+        <div class="buyer-category-row" aria-label="商品分类筛选">
+          <button type="button" class="buyer-cat" :class="{ active: activeCategory === 'all' }" @click="activeCategory = 'all'">全部</button>
+          <button v-for="c in categories" :key="c" type="button" class="buyer-cat" :class="{ active: activeCategory === c }" @click="activeCategory = c">{{ c }}</button>
+        </div>
         <div class="buyer-product-grid">
-          <button v-for="product in visibleProducts" :key="product.id" type="button" class="buyer-product" @click="quickAsk(`${product.name}在哪里？`)">
+          <button v-for="product in visibleProducts" :key="product.id" type="button" class="buyer-product" :class="{ soldout: product.stock <= 0 }" @click="quickAsk(`${product.name}在哪里？`)">
             <span class="buyer-product-category">{{ product.category }}</span>
             <strong>{{ product.name }}</strong>
-            <small>{{ product.location }} 货架</small>
+            <span class="buyer-product-desc">{{ product.desc }}</span>
+            <small>{{ product.location }} 货架 · {{ product.stock <= 0 ? '暂时缺货' : `库存 ${product.stock} 件` }}</small>
             <b>{{ formatMoney(product.price) }}</b>
           </button>
         </div>
@@ -63,7 +68,7 @@
 
       <div class="store-foot">
         <div>{{ storeProfile.address }}</div>
-        <div>{{ storeProfile.hours }} · {{ storeProfile.phone }}</div>
+        <div>{{ storeProfile.hours }} · <a class="store-tel" :href="`tel:${storeProfile.phone}`">{{ storeProfile.phone }}</a></div>
       </div>
       </template>
     </ion-content>
@@ -111,11 +116,14 @@ const msgs = ref<Array<{ role: 'user' | 'assistant'; text: string; source?: stri
 const isDemo = isDemoMode;
 
 const activePromos = computed(() => promotions.value.filter((p) => p.active));
+const activeCategory = ref('all');
+const categories = computed(() => [...new Set(products.value.filter((product) => product.published !== false).map((product) => product.category))]);
 const visibleProducts = computed(() => {
   const keyword = productSearch.value.trim().toLocaleLowerCase();
   return products.value
-    .filter((product) => !keyword || [product.name, product.category, product.location, product.desc].some((value) => value.toLocaleLowerCase().includes(keyword)))
-    .slice(0, 12);
+    .filter((product) => product.published !== false)
+    .filter((product) => activeCategory.value === 'all' || product.category === activeCategory.value)
+    .filter((product) => !keyword || [product.name, product.category, product.location, product.desc].some((value) => value.toLocaleLowerCase().includes(keyword)));
 });
 
 const { supported: speechSupported, listening, isError: speechIsError, transcript, error: speechError, start: startSpeech, stop: stopSpeech, reset: resetSpeech } = useSpeech((text) => {

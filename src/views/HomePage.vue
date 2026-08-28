@@ -18,6 +18,25 @@
         <div class="greet-sub">{{ todayText() }} · {{ storeProfile.hours }}</div>
       </div>
 
+      <ion-card v-if="onboardingPending" class="onboarding-card">
+        <ion-card-header>
+          <ion-card-title><ion-icon :icon="mapOutline" color="primary" /> 开店引导</ion-card-title>
+          <ion-card-subtitle>完成 {{ doneCount }}/{{ steps.length }} 步，顾客即可扫码使用</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-list lines="full" class="no-pad">
+            <ion-item v-for="step in steps" :key="step.key" :button="!step.done" :router-link="step.done ? undefined : step.link" :detail="!step.done">
+              <ion-icon slot="start" :icon="step.done ? checkmarkCircle : radioButtonOff" :color="step.done ? 'success' : 'medium'" />
+              <ion-label>
+                <h2>{{ step.label }}</h2>
+                <p class="tiny">{{ step.hint }}</p>
+              </ion-label>
+              <ion-badge v-if="step.done" slot="end" color="success">已完成</ion-badge>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+
       <ion-grid class="stat-grid">
         <ion-row>
           <ion-col size="6"><div class="stat-card"><div class="stat-num">{{ fmt(today.revenue) }}</div><div class="stat-label">今日销售额</div></div></ion-col>
@@ -96,13 +115,14 @@
 import { computed } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
-  IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+  IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent,
   IonList, IonItem, IonLabel, IonBadge } from '@ionic/vue';
-import { storefront, addCircle, chatbubbles, warning, chatbubbleEllipses, flash } from 'ionicons/icons';
-import { storeProfile, queries } from '@/services/data';
+import { storefront, addCircle, chatbubbles, warning, chatbubbleEllipses, flash, mapOutline, checkmarkCircle, radioButtonOff } from 'ionicons/icons';
+import { storeProfile, products, sales, queries, loadAll } from '@/services/data';
 import { todaySummary, lowStock } from '@/services/report.service';
 import { todaySales } from '@/services/sale.service';
 import { businessInsights } from '@/services/insight.service';
+import { onboardingPending as isOnboardingPending, onboardingSteps } from '@/services/onboarding.service';
 import { useAuth } from '@/composables/useAuth';
 import { isDemoMode } from '@/lib/supabase';
 import { publicStoreUrl } from '@/lib/platform-config';
@@ -110,6 +130,9 @@ import { publicStoreUrl } from '@/lib/platform-config';
 const today = computed(() => todaySummary());
 const lowList = computed(() => lowStock());
 const insights = computed(() => businessInsights());
+const steps = computed(() => onboardingSteps(storeProfile.value, products.value.length, sales.value.length > 0));
+const onboardingPending = computed(() => isOnboardingPending(steps.value));
+const doneCount = computed(() => steps.value.filter((s) => s.done).length);
 const todayQueries = computed(() => queries.value.filter((q) => {
   const d = new Date(q.createdAt);
   const now = new Date();
@@ -132,5 +155,6 @@ function timeText(iso: string): string {
 
 onIonViewWillEnter(() => {
   void todaySales();
+  void loadAll();
 });
 </script>

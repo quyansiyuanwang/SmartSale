@@ -1,9 +1,9 @@
 import { toastController } from '@ionic/vue';
 
-export async function showToast(message: string, color: 'success' | 'danger' | 'dark' = 'dark') {
+export async function showToast(message: string, color: 'success' | 'danger' | 'dark' = 'dark', duration = 2000) {
   const toast = await toastController.create({
     message,
-    duration: 2000,
+    duration,
     position: 'bottom',
     color
   });

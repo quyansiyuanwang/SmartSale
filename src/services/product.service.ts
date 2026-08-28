@@ -15,6 +15,13 @@ export function findProductByName(keyword: string): Product | undefined {
   );
 }
 
+/** 扫码/手动输入条码后精确匹配已建档商品 */
+export function findProductByBarcode(barcode: string): Product | undefined {
+  const code = barcode.trim();
+  if (!code) return undefined;
+  return products.value.find((p) => p.barcode === code);
+}
+
 export function listProducts(search = ''): Product[] {
   const s = search.trim().toLowerCase();
   if (!s) return [...products.value];

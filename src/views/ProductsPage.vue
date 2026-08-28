@@ -62,6 +62,7 @@
           </ion-label>
           <div class="prod-right">
             <div class="price">{{ fmtMoney(p.price) }}</div>
+            <ion-badge v-if="p.published === false" color="medium">未发布</ion-badge>
             <ion-badge :color="p.stock <= p.safeStock ? 'danger' : 'success'">库存 {{ p.stock }}</ion-badge>
           </div>
         </ion-item>

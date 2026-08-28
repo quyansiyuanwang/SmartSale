@@ -22,9 +22,14 @@
             <h2>{{ insight.title }}</h2>
             <p>{{ insight.detail }}</p>
           </div>
-          <ion-button size="small" :color="insight.kind === 'promotion' ? 'warning' : 'primary'" @click="handleInsight(insight)">
-            {{ insight.actionLabel }}
-          </ion-button>
+          <div class="insight-actions">
+            <ion-button size="small" :color="insight.kind === 'promotion' ? 'warning' : 'primary'" @click="handleInsight(insight)">
+              {{ insight.actionLabel }}
+            </ion-button>
+            <ion-button v-if="insight.kind === 'restock'" size="small" fill="outline" color="danger" @click="goRestock">
+              去补货
+            </ion-button>
+          </div>
         </article>
       </section>
 
@@ -32,7 +37,7 @@
         <ion-icon :icon="checkmarkCircle" />
         <h2>暂时没有待跟进的机会</h2>
         <p>顾客端产生新咨询后，智店管家会在这里给出下一步建议。</p>
-        <ion-button router-link="/s/demo-store" fill="outline">进入顾客端体验</ion-button>
+        <ion-button :router-link="customerEntry" fill="outline">进入顾客端体验</ion-button>
       </section>
     </ion-content>
   </ion-page>
@@ -40,6 +45,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { alertController, IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonChip, IonContent, IonIcon, IonButton } from '@ionic/vue';
 import { chatbubbleEllipses, checkmarkCircle, pricetag, warning } from 'ionicons/icons';
@@ -49,8 +55,18 @@ import { markQueriesFollowed } from '@/services/query.service';
 import { createPromotion } from '@/services/promotion.service';
 import { loadAll } from '@/services/data';
 import { showToast } from '@/composables/useToast';
+import { useAuth } from '@/composables/useAuth';
+import { isDemoMode } from '@/lib/supabase';
+import { publicStoreUrl } from '@/lib/platform-config';
 
+const router = useRouter();
 const insights = computed(() => businessInsights());
+const { currentStore } = useAuth();
+const customerEntry = computed(() => isDemoMode ? '/s/demo-store' : publicStoreUrl(currentStore.value?.slug || ''));
+
+function goRestock() {
+  void router.push('/alerts');
+}
 
 function iconFor(kind: BusinessInsight['kind']) {
   return kind === 'restock' ? warning : kind === 'promotion' ? pricetag : chatbubbleEllipses;

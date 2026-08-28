@@ -2,8 +2,11 @@ import { storeProfile, llmConfig, persistProfile, persistLlm } from './data';
 import { StoreProfile, LlmConfig } from '@/types';
 import { isDemoMode, supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
+import { KEYS, loadJSON, saveJSON } from './storage.service';
 
 export interface PublicServiceSettings { serviceStatus: 'active' | 'suspended'; publicEnabled: boolean; }
+
+const DEFAULT_PUBLIC_SERVICE: PublicServiceSettings = { serviceStatus: 'active', publicEnabled: true };
 
 export async function saveProfile(patch: Partial<StoreProfile>): Promise<StoreProfile> {
   storeProfile.value = { ...storeProfile.value, ...patch };
@@ -22,14 +25,14 @@ export function hasApiKey(): boolean {
 }
 
 export async function loadPublicServiceSettings(): Promise<PublicServiceSettings> {
-  if (isDemoMode) return { serviceStatus: 'active', publicEnabled: true };
+  if (isDemoMode) return loadJSON<PublicServiceSettings>(KEYS.publicService, { ...DEFAULT_PUBLIC_SERVICE });
   const storeId = useAuth().currentStore.value?.id; if (!supabase || !storeId) throw new Error('未选择门店');
   const { data, error } = await supabase.from('stores').select('service_status,public_enabled').eq('id', storeId).single(); if (error) throw error;
   return { serviceStatus: data.service_status, publicEnabled: data.public_enabled };
 }
 
 export async function savePublicServiceSettings(settings: PublicServiceSettings): Promise<void> {
-  if (isDemoMode) return;
+  if (isDemoMode) { await saveJSON(KEYS.publicService, settings); return; }
   const storeId = useAuth().currentStore.value?.id; if (!supabase || !storeId) throw new Error('未选择门店');
   const { error } = await supabase.from('stores').update({ service_status: settings.serviceStatus, public_enabled: settings.publicEnabled }).eq('id', storeId); if (error) throw error;
 }

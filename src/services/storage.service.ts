@@ -7,6 +7,7 @@ export const KEYS = {
   sales: 'ss.sales',
   queries: 'ss.queries',
   promotions: 'ss.promotions',
+  publicService: 'ss.publicService',
   seeded: 'ss.seeded.v1'
 } as const;
 

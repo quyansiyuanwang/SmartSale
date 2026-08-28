@@ -9,6 +9,8 @@ export interface Product {
   safeStock: number;
   location: string;
   desc: string;
+  /** 未设置时视为已发布；顾客端只展示 published !== false 的商品 */
+  published?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,6 +25,7 @@ export interface ProductInput {
   safeStock: number;
   location: string;
   desc: string;
+  published?: boolean;
 }
 
 export interface SaleRecord {

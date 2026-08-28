@@ -1,7 +1,7 @@
 import { products, promotions } from './data';
 import { Product, AiReply } from '@/types';
 import { findProductByName, updateProduct } from './product.service';
-import { topProducts, slowMoving, fmtMoney } from './report.service';
+import { topProducts, weeklyReport, mondayOf, fmtMoney } from './report.service';
 import { isDemoMode, supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
 import { getPlatformConfig } from '@/lib/platform-config';
@@ -211,30 +211,33 @@ export interface CommandResult {
 export async function detectCommand(command: string): Promise<CommandResult> {
   const text = command.trim();
 
-  if (/报表|周报|本周|热销|滞销|利润|统计/.test(text)) {
-    const end = new Date();
-    const start = new Date(end.getTime() - 7 * 24 * 3600 * 1000);
-    const top = topProducts(start, end, 3)
+  if (/报表|周报|本周|上周|热销|滞销|利润|统计/.test(text)) {
+    const weeksAgo = /上周/.test(text) ? 1 : 0;
+    const report = weeklyReport(new Date(mondayOf(new Date()).getTime() - weeksAgo * 7 * 24 * 3600 * 1000));
+    const label = weeksAgo ? '上周' : '本周';
+    const top = report.top.slice(0, 3)
       .map((t) => `${t.name}(${t.qty}件)`)
       .join('、');
-    const slow = slowMoving(14)
-      .slice(0, 3)
+    const slow = report.slow.slice(0, 3)
       .map((p) => p.name)
       .join('、');
     return {
       changed: false,
       reply: {
-        text: `📊 近 7 天热销：${top || '暂无'}。\n🕰️ 近 14 天滞销：${slow || '暂无'}。建议对滞销品做「降价 10% 或捆绑热销品」促销，每周一可查看完整周报。`,
+        text: `📊 ${label}热销：${top || '暂无'}。\n🕰️ 近 14 天滞销：${slow || '暂无'}。建议对滞销品做「降价 10% 或捆绑热销品」促销，完整数据见「报表」页。`,
         demo: true,
         source: 'command'
       }
     };
   }
 
-  const priceMatch = text.match(/(?:改|设置|设定|调整|把)(.{1,20}?)(?:的)?(?:价格|售价)(?:改为|改成|调成|设成|定成|到|至|为|成)?(\d+(?:\.\d+)?)\s*(?:元|块)?/);
+  const priceMatch = text.match(/(?:改|设置|设定|调整|把)(.{1,20}?)(?:的)?(?:价格|售价)(?:改为|改成|调成|设成|定成|到|至|为|成)?\s*(\d+(?:\.\d+)?)?\s*(?:元|块)?/);
   if (priceMatch) {
     const p = findProductByName(priceMatch[1].trim());
     if (!p) return { changed: false, reply: { text: `没有找到「${priceMatch[1].trim()}」对应的商品，请确认商品名称。`, demo: true, source: 'command' } };
+    if (!priceMatch[2]) {
+      return { changed: false, reply: { text: `请问要把「${p.name}」改成多少钱？可以说「${p.name}价格改为 5」。`, demo: true, source: 'command' } };
+    }
     const price = Math.round(parseFloat(priceMatch[2]) * 100) / 100;
     if (price <= 0) return { changed: false, reply: { text: '价格需要大于 0。', demo: true, source: 'command' } };
     const oldPrice = p.price;

@@ -60,6 +60,10 @@
         <ion-label position="stacked">商品描述 / 知识库</ion-label>
         <ion-textarea v-model="form.desc" :rows="3" placeholder="用途、安装/使用方法等，智购顾问会参考它回答顾客" />
       </ion-item>
+      <ion-item>
+        <ion-label>在顾客端展示（已发布）</ion-label>
+        <ion-toggle v-model="form.published" />
+      </ion-item>
 
       <div class="ion-margin-top">
         <ion-button expand="block" color="primary" @click="save" :disabled="saving">
@@ -79,7 +83,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent,
   IonItem, IonLabel, IonInput, IonSelect, IonSelectOption, IonRow, IonCol, IonTextarea,
-  IonButton, IonIcon } from '@ionic/vue';
+  IonToggle, IonButton, IonIcon } from '@ionic/vue';
 import { save as saveIcon } from 'ionicons/icons';
 import { showToast } from '@/composables/useToast';
 import { ProductInput } from '@/types';
@@ -100,7 +104,8 @@ const form = reactive<ProductInput>({
   stock: 0,
   safeStock: 0,
   location: '',
-  desc: ''
+  desc: '',
+  published: true
 });
 
 const notify = showToast;
@@ -115,7 +120,8 @@ async function load() {
   }
   Object.assign(form, {
     name: p.name, barcode: p.barcode, category: p.category, buyPrice: p.buyPrice,
-    price: p.price, stock: p.stock, safeStock: p.safeStock, location: p.location, desc: p.desc
+    price: p.price, stock: p.stock, safeStock: p.safeStock, location: p.location, desc: p.desc,
+    published: p.published !== false
   });
 }
 
@@ -134,7 +140,8 @@ async function save() {
       buyPrice: Math.max(0, Number(form.buyPrice) || 0),
       price,
       stock: Math.max(0, Number(form.stock) || 0),
-      safeStock: Math.max(0, Number(form.safeStock) || 0)
+      safeStock: Math.max(0, Number(form.safeStock) || 0),
+      published: form.published !== false
     };
     if (isNew.value) {
       await createProduct(input);

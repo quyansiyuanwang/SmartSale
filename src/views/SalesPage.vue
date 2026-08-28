@@ -10,7 +10,17 @@
         <ion-title>销售录入</ion-title>
       </ion-toolbar>
       <ion-toolbar>
-        <ion-searchbar v-model="search" placeholder="搜索商品名称 / 输入条码" />
+        <div class="sale-search-row">
+          <ion-searchbar v-model="search" placeholder="搜索名称 / 输入条码后回车" @keyup.enter="onSearchEnter" />
+          <ion-button v-if="scanSupported" fill="clear" color="primary" aria-label="扫码录入商品" @click="startScan">
+            <ion-icon slot="icon-only" :icon="barcodeOutline" />
+          </ion-button>
+          <ion-button v-if="speechSupported" fill="clear" :class="listening ? 'mic-active' : ''" :color="speechIsError ? 'warning' : 'primary'" :aria-label="listening ? '停止语音' : '语音输入商品'" @click="toggleMic">
+            <ion-icon slot="icon-only" :icon="listening ? stop : speechIsError ? refresh : mic" />
+          </ion-button>
+        </div>
+        <ion-note v-if="listening" class="sale-listen-note" color="danger">正在聆听：{{ transcript }}</ion-note>
+        <ion-note v-else-if="speechError" class="sale-listen-note" color="danger">{{ speechError }}，点击麦克风重试</ion-note>
       </ion-toolbar>
       <ion-toolbar class="list-controls-toolbar">
         <div class="list-controls">
@@ -78,6 +88,15 @@
         </ion-item>
       </ion-list>
     </ion-content>
+
+    <div v-if="scanner.scanning.value" class="scan-overlay">
+      <video ref="videoEl" class="scan-video" playsinline muted autoplay />
+      <div class="scan-frame" />
+      <p class="scan-tip">将商品条码对准取景框，识别后自动选中</p>
+      <ion-button shape="round" fill="outline" color="light" @click="scanner.stop()">
+        <ion-icon slot="start" :icon="close" />取消扫码
+      </ion-button>
+    </div>
   </ion-page>
 </template>
 
@@ -87,11 +106,14 @@ import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonSearchbar, IonContent, IonList, IonItem,
   IonLabel, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonInput,
   IonButton, IonIcon, IonNote, IonSegment, IonSegmentButton, IonSelect, IonSelectOption } from '@ionic/vue';
-import { arrowBack, checkmark } from 'ionicons/icons';
+import { arrowBack, checkmark, mic, stop, refresh, barcodeOutline, close } from 'ionicons/icons';
 import { Product } from '@/types';
-import { listProducts } from '@/services/product.service';
+import { listProducts, findProductByBarcode } from '@/services/product.service';
 import { recordSale, todaySales } from '@/services/sale.service';
 import { fmtMoney } from '@/services/report.service';
+import { useSpeech } from '@/composables/useSpeech';
+import { lowStockAlertText, useVoiceAlert } from '@/composables/useVoiceAlert';
+import { barcodeScannerSupported, useBarcodeScanner } from '@/composables/useBarcodeScanner';
 import { showToast } from '@/composables/useToast';
 
 const search = ref('');
@@ -99,6 +121,7 @@ const selected = ref<Product | null>(null);
 const qty = ref(1);
 const saving = ref(false);
 const todayList = ref(todaySales());
+const voiceAlert = useVoiceAlert();
 const stockFilter = ref<'all' | 'available' | 'low'>('all');
 const sortBy = ref<'name' | 'stockAsc' | 'priceAsc'>('name');
 
@@ -128,13 +151,57 @@ function select(p: Product) {
   search.value = '';
 }
 
+const { supported: speechSupported, listening, isError: speechIsError, transcript, error: speechError, start: startSpeech, stop: stopSpeech, reset: resetSpeech } = useSpeech((text) => {
+  search.value = text;
+});
+
+function toggleMic() {
+  if (listening.value) stopSpeech();
+  else { resetSpeech(); startSpeech(); }
+}
+
+const scanSupported = barcodeScannerSupported();
+const videoEl = ref<HTMLVideoElement | null>(null);
+const scanner = useBarcodeScanner((code) => {
+  const p = findProductByBarcode(code);
+  if (p) {
+    select(p);
+    void showToast(`已识别条码：${p.name}`, 'success');
+  } else {
+    search.value = code;
+    void showToast(`条码 ${code} 尚未建档，已填入搜索`, 'dark', 3000);
+  }
+});
+
+async function startScan() {
+  if (!videoEl.value) return;
+  await scanner.start(videoEl.value);
+  if (scanner.error.value) await showToast(scanner.error.value, 'danger', 3000);
+}
+
+/** 条码/名称回车后自动选中唯一匹配，模拟扫码枪录入 */
+function onSearchEnter() {
+  const kw = search.value.trim();
+  if (!kw || selected.value) return;
+  const exact = findProductByBarcode(kw)
+    ?? listProducts(kw).find((item) => item.name === kw)
+    ?? (filtered.value.length === 1 ? filtered.value[0] : undefined);
+  if (exact) select(exact);
+}
+
 async function confirm() {
   if (!selected.value) return;
   saving.value = true;
   try {
     const res = await recordSale(selected.value.id, qty.value);
     if (res.ok) {
-      await showToast(`已售出 ${res.sale?.productName} ×${res.sale?.qty}`, 'success');
+      if (res.lowStockProduct) {
+        const { name, stock, safeStock } = res.lowStockProduct;
+        await showToast(`⚠️ ${lowStockAlertText(name, stock, safeStock)}`, 'danger', 4000);
+        voiceAlert.speak(lowStockAlertText(name, stock, safeStock));
+      } else {
+        await showToast(`已售出 ${res.sale?.productName} ×${res.sale?.qty}`, 'success');
+      }
       selected.value = null;
       qty.value = 1;
       todayList.value = todaySales();

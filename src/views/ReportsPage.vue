@@ -9,10 +9,14 @@
     <ion-content :fullscreen="true" class="ion-padding">
       <ion-card class="weekly-card">
         <ion-card-header>
-          <ion-card-title>本周经营周报</ion-card-title>
+          <ion-card-title>经营周报</ion-card-title>
           <ion-card-subtitle>{{ weekLabel }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
+          <ion-segment v-model="weekScope" class="week-segment" aria-label="周报统计范围">
+            <ion-segment-button value="this"><ion-label>本周</ion-label></ion-segment-button>
+            <ion-segment-button value="last"><ion-label>上周</ion-label></ion-segment-button>
+          </ion-segment>
           <ion-grid>
             <ion-row>
               <ion-col size="4"><div class="mini-stat"><div class="num">{{ fmtMoney(summary.revenue) }}</div><div class="label">营业额</div></div></ion-col>
@@ -38,6 +42,7 @@
                 <h2>{{ p.name }} <ion-badge color="warning">剩 {{ p.stock }} 件</ion-badge></h2>
                 <p>建议：降价 10% 或与热销品捆绑促销</p>
               </ion-label>
+              <ion-button slot="end" size="small" fill="outline" color="warning" @click="createSlowPromotion(p)">生成 9 折促销</ion-button>
             </ion-item>
             <ion-item v-if="!report.slow.length">
               <ion-label class="ion-text-center">暂无滞销商品，表现不错 👏</ion-label>
@@ -77,18 +82,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, IonCardHeader,
   IonCardTitle, IonCardSubtitle, IonCardContent, IonGrid, IonRow, IonCol, IonList, IonItem,
-  IonLabel, IonBadge, IonInput, IonButton, IonIcon, IonNote } from '@ionic/vue';
+  IonLabel, IonBadge, IonInput, IonButton, IonIcon, IonNote, IonSegment, IonSegmentButton, alertController } from '@ionic/vue';
 import { mic, stop, refresh, send, terminal, bulb } from 'ionicons/icons';
-import { weeklyReport, fmtMoney } from '@/services/report.service';
+import { weeklyReport, mondayOf, fmtMoney } from '@/services/report.service';
+import { createPromotion } from '@/services/promotion.service';
 import { CommandResult } from '@/services/ai.service';
 import { runStorekeeperWorkflow } from '@/services/agent-orchestrator.service';
 import { useSpeech } from '@/composables/useSpeech';
 import { showToast } from '@/composables/useToast';
+import { Product } from '@/types';
 
+const weekScope = ref<'this' | 'last'>('this');
 const report = ref(weeklyReport());
 const summary = computed(() => report.value.summary);
 const weekLabel = computed(() => {
@@ -97,6 +105,41 @@ const weekLabel = computed(() => {
   const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
   return `${fmt(f)} - ${fmt(t)}`;
 });
+
+function refreshReport() {
+  const reference = weekScope.value === 'last'
+    ? new Date(mondayOf(new Date()).getTime() - 7 * 24 * 3600 * 1000)
+    : new Date();
+  report.value = weeklyReport(reference);
+}
+
+watch(weekScope, refreshReport);
+
+async function createSlowPromotion(p: Product) {
+  const promoPrice = Math.max(0.1, Math.round(p.price * 0.9 * 100) / 100);
+  const dialog = await alertController.create({
+    header: '生成滞销促销',
+    message: `将创建并公开促销：「${p.name}」限时 9 折，${fmtMoney(p.price)} → ${fmtMoney(promoPrice)}。`,
+    buttons: [
+      { text: '取消', role: 'cancel' },
+      { text: '确认创建', handler: () => { void publishSlowPromotion(p, promoPrice); } }
+    ]
+  });
+  await dialog.present();
+}
+
+async function publishSlowPromotion(p: Product, promoPrice: number) {
+  try {
+    await createPromotion({
+      title: `${p.name} · 限时 9 折`,
+      detail: `滞销清仓：原价 ${fmtMoney(p.price)}，促销价 ${fmtMoney(promoPrice)}，进店即可享受。`,
+      active: true
+    });
+    await showToast('滞销促销已公开到顾客端', 'success');
+  } catch (error) {
+    await showToast(error instanceof Error ? error.message : '促销创建失败', 'danger');
+  }
+}
 
 const cmdText = ref('');
 const cmdResult = ref<CommandResult['reply'] | null>(null);
@@ -126,6 +169,6 @@ function sourceTag(src?: string): string {
 }
 
 onIonViewWillEnter(() => {
-  report.value = weeklyReport();
+  refreshReport();
 });
 </script>

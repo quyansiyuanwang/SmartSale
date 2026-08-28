@@ -25,3 +25,31 @@ export async function createPromotion(input: PromotionInput): Promise<Promotion>
   promotions.value.unshift(promotion);
   return promotion;
 }
+
+export async function setPromotionActive(id: string, active: boolean): Promise<Promotion | undefined> {
+  const promotion = promotions.value.find((p) => p.id === id);
+  if (!promotion) return undefined;
+  promotion.active = active;
+
+  if (isDemoMode) {
+    await persistPromotions();
+    return promotion;
+  }
+  const storeId = useAuth().currentStore.value?.id;
+  if (!supabase || !storeId) throw new Error('未选择门店');
+  const { error } = await supabase.from('promotions').update({ active }).eq('id', id);
+  if (error) throw error;
+  return promotion;
+}
+
+export async function deletePromotion(id: string): Promise<void> {
+  promotions.value = promotions.value.filter((p) => p.id !== id);
+  if (isDemoMode) {
+    await persistPromotions();
+    return;
+  }
+  const storeId = useAuth().currentStore.value?.id;
+  if (!supabase || !storeId) throw new Error('未选择门店');
+  const { error } = await supabase.from('promotions').delete().eq('id', id);
+  if (error) throw error;
+}

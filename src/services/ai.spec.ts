@@ -62,9 +62,21 @@ describe('AI 服务（无 Key 降级）', () => {
     expect(res.reply.text).toContain('5');
   });
 
+  it('语音指令：改价格缺少数字时反问金额', async () => {
+    const res = await detectCommand('改胶带价格');
+    expect(res.changed).toBe(false);
+    expect(res.reply.text).toContain('电工胶带');
+    expect(res.reply.text).toContain('多少钱');
+  });
+
   it('语音指令：本周报表', async () => {
     const res = await detectCommand('本周报表');
     expect(res.reply.text).toContain('热销');
+  });
+
+  it('语音指令：上周报表', async () => {
+    const res = await detectCommand('上周报表');
+    expect(res.reply.text).toContain('上周热销');
   });
 
   it('语音指令：未知格式给出提示', async () => {
