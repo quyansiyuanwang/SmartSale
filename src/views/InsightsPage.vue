@@ -37,7 +37,7 @@
         <ion-icon :icon="checkmarkCircle" />
         <h2>暂时没有待跟进的机会</h2>
         <p>顾客端产生新咨询后，智店管家会在这里给出下一步建议。</p>
-        <ion-button :router-link="customerEntry" fill="outline">进入顾客端体验</ion-button>
+        <ion-button :href="customerEntry" fill="outline">进入顾客端体验</ion-button>
       </section>
     </ion-content>
   </ion-page>

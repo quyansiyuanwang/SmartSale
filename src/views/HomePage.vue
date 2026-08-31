@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title>{{ storeProfile.name }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button :router-link="customerEntry" color="primary">
+          <ion-button :href="customerEntry" color="primary">
             <ion-icon slot="start" :icon="storefront" />
             顾客端
           </ion-button>
@@ -50,7 +50,7 @@
         <ion-button expand="block" router-link="/tabs/sales" color="primary">
           <ion-icon slot="start" :icon="addCircle" />录入销售
         </ion-button>
-        <ion-button expand="block" fill="outline" :router-link="customerEntry">
+        <ion-button expand="block" fill="outline" :href="customerEntry">
           <ion-icon slot="start" :icon="chatbubbles" />进入智购顾问
         </ion-button>
       </div>

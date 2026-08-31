@@ -18,7 +18,7 @@
       </div>
 
       <ion-list inset>
-        <ion-item button :router-link="customerEntry">
+        <ion-item button :href="customerEntry">
           <ion-icon slot="start" :icon="qrCode" />
           <ion-label>顾客端入口（智购顾问）</ion-label>
           <ion-icon slot="end" :icon="chevronForward" size="small" />
