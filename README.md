@@ -5,7 +5,7 @@
 
 「智售引擎」首期 MVP 包含两个入口，同一份本地数据、同一条业务闭环：
 
-- **智店管家（商家端）**：Android App/PWA 管理后台，提供开店引导清单、经营概览、商品管理（含“已发布”上架开关）、销售录入（相机扫码 / 条码回车即录 / 语音填入）、库存预警（含语音播报补货提醒）、经营报表（本周/上周）、滞销一键 9 折促销、促销启停管理和顾客需求看板。
+- **智店管家（商家端）**：Android App/PWA 管理后台，提供开店引导清单、经营概览、商品管理（含“已发布”上架开关）、销售录入（相机扫码 / 条码回车即录 / 语音填入）、库存预警（含语音播报补货提醒）、经营报表（本周/上周）、滞销一键 9 折促销、促销启停管理、知识库资料管理（上传/发布顾客问答资料）和顾客需求看板。
 - **智购顾问（买家端）**：扫码即用入口、找货问答（货架/价格/替代品）、知识库问答、场景化清单推荐（装修/开学文具/家庭药箱/百元工具）、商品目录（分类筛选、库存、描述与缺货标识）、当前促销展示与一键拨号联系门店。
 
 买家咨询（找货/问答）会实时写入商家「顾客需求」看板，形成「录入销售 → 库存变化 → 顾客问答 → 商家响应」的完整闭环。
@@ -127,6 +127,8 @@ smart-sale/
 │  │  ├─ report.service.ts    # 周报 / 滞销 / 热销统计
 │  │  ├─ query.service.ts     # 顾客咨询（双端联动）
 │  │  ├─ store.service.ts     # 店铺资料 / AI 配置
+│  │  ├─ knowledge.service.ts # 本地知识检索（商品/文档/图谱）
+│  │  ├─ knowledge-admin.service.ts # 知识库上传/发布/删除（云端）
 │  │  └─ ai.service.ts        # DeepSeek 接入 + 本地降级
 │  ├─ theme/                  # Ionic 主题与自定义样式
 │  ├─ types/index.ts          # 核心类型定义
@@ -178,6 +180,10 @@ smart-sale/
 
 - 新商家登录后，首页按门店状态显示「开店引导」清单：完善门店资料 → 录入第一个商品（支持 CSV 批量导入）→ 录入第一笔销售；每步可点击直达对应页面，全部完成后自动隐藏，不打扰日常使用。
 
+### 知识库资料管理（云端）
+
+- 商家在「门店服务设置」上传 PDF/DOCX/TXT/Markdown 资料（单文件 ≤ 10 MB），系统自动切片并向量化；「发布」后顾客售前问答即会检索引用，未发布或已撤回的文档不影响问答。
+
 ---
 
 ## 验收基线
@@ -212,18 +218,3 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 
 - 部署、配置、商家与顾客入口、运维和发布说明见 [docs/README.md](docs/README.md)。
 - 立项依据 / 双 Agent 方案详见 `goal/` 目录。
-# 生产环境配置
-
-### 简化配置
-
-本机开发可以运行 `npm run db:start`（需要 Docker Desktop）。将 URL 与 Anon Key 写入未提交的 `.env.local` 后运行 `npm run dev`；平台模型 Key 只配置到 Edge Function Secrets。
-
-生产模式使用 Supabase Postgres、Auth、Storage 和 Edge Functions。复制 `.env.example` 到本地环境并填写 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`；不要把供应商密钥写入前端环境变量。
-
-执行 `supabase db reset` 或将 `supabase/migrations` 部署到开发项目后，为门店创建成员并配置 Storage。Edge Functions 需要以下 Secrets：`DEEPSEEK_API_KEY` 或 `OPENAI_COMPATIBLE_API_KEY`/`OPENAI_COMPATIBLE_BASE_URL`，以及 `EMBEDDING_API_KEY`、`EMBEDDING_BASE_URL`、`EMBEDDING_MODEL`、`SUPABASE_SERVICE_ROLE_KEY`。知识库单文件上限 10 MB，文档必须发布后才会被顾客问答检索。
-
-管理端使用邮箱登录，顾客端使用 `/s/<store-slug>` 公开入口。数据库 RLS 按 `store_id` 隔离 owner、manager、staff 权限；销售必须通过 `record_sale` RPC 扣库存并保存价格快照。未配置 Supabase 时，只有显式 `VITE_DEMO_MODE=true`（或测试模式）才会播种本地演示数据，生产环境不会自动写入种子。
-
-## CI 与发布
-
-所有分支 push 和手动 `workflow_dispatch` 会生成 Web、Android debug、iOS unsigned 制品并保留 30 天；`vX.Y.Z` tag 还会校验 `package.json.version`，在签名 Secrets 齐全后创建 GitHub Release。当前移动端签名材料缺失时，正式 tag 会失败且不会创建不完整 Release。

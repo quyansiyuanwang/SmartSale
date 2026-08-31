@@ -155,6 +155,19 @@ export interface AgentRun {
   createdAt: string;
 }
 
+export type KnowledgeDocumentStatus = 'processing' | 'draft' | 'published' | 'failed' | 'withdrawn';
+
+export interface KnowledgeDocument {
+  id: string;
+  fileName: string;
+  storagePath: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: KnowledgeDocumentStatus;
+  error?: string | null;
+  createdAt: string;
+}
+
 export interface KnowledgeHit {
   id: string;
   kind: 'product' | 'document' | 'graph';

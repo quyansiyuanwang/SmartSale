@@ -10,6 +10,26 @@
 
       <ion-card><ion-card-header><ion-card-title>商品批量导入</ion-card-title><ion-card-subtitle>支持 CSV、Excel（.xlsx）文件；系统会先检查全部数据，避免部分写入。</ion-card-subtitle></ion-card-header><ion-card-content><div class="import-actions"><ion-button fill="outline" @click="downloadTemplate"><ion-icon slot="start" :icon="documentTextOutline" />下载模板</ion-button><ion-button @click="chooseFile" :disabled="importing"><ion-icon slot="start" :icon="cloudUploadOutline" />{{ importing ? '正在导入…' : '选择文件导入' }}</ion-button><input ref="fileInput" class="hidden-file" type="file" accept=".csv,.xlsx,.xls" @change="handleFile" /></div><ion-note v-if="importMessage" class="block-note" :color="importErrors.length ? 'danger' : 'success'">{{ importMessage }}</ion-note><ion-list v-if="importErrors.length" lines="inset" class="import-errors"><ion-item v-for="(item,index) in importErrors.slice(0,8)" :key="`${item.row}-${index}`"><ion-label>第 {{ item.row || '已存在' }} 行：{{ item.message }}</ion-label></ion-item></ion-list></ion-card-content></ion-card>
 
+      <ion-card><ion-card-header><ion-card-title>知识库（AI 问答资料）</ion-card-title><ion-card-subtitle>上传商品说明书、安装指南等资料并发布后，顾客提问会优先引用这些内容。</ion-card-subtitle></ion-card-header><ion-card-content>
+        <div v-if="isDemo" class="knowledge-body"><ion-note class="block-note" color="medium">演示模式使用内置示例知识库。连接平台服务（Supabase）后，可在这里上传和维护门店自己的问答资料。</ion-note></div>
+        <div v-else class="knowledge-body">
+          <div class="import-actions"><ion-button @click="chooseKnowledgeFile" :disabled="knowledgeUploading"><ion-icon slot="start" :icon="cloudUploadOutline" />{{ knowledgeUploading ? '正在上传解析…' : '上传知识文档' }}</ion-button><input ref="knowledgeFileInput" class="hidden-file" type="file" :accept="knowledgeAccept" @change="handleKnowledgeFile" /></div>
+          <ion-note class="block-note" color="medium">支持 PDF、DOCX、TXT、Markdown，单文件不超过 10 MB；「已发布」的文档才会被顾客问答检索。</ion-note>
+          <ion-note v-if="knowledgeMessage" class="block-note" :color="knowledgeMessageColor">{{ knowledgeMessage }}</ion-note>
+          <ion-list lines="inset" class="promo-manage-list"><ion-item v-for="doc in knowledgeDocs" :key="doc.id">
+            <ion-icon slot="start" :icon="libraryOutline" :color="doc.status === 'published' ? 'success' : 'medium'" />
+            <ion-label><h2>{{ doc.fileName }}</h2><p v-if="doc.status === 'failed' && doc.error" class="knowledge-error">解析失败：{{ doc.error }}</p><p v-else>{{ formatBytes(doc.sizeBytes) }} · {{ knowledgeStatusLabel(doc.status) }}</p></ion-label>
+            <ion-badge slot="end" :color="knowledgeStatusColor(doc.status)">{{ knowledgeStatusLabel(doc.status) }}</ion-badge>
+            <div slot="end" class="knowledge-actions">
+              <ion-button v-if="doc.status === 'published'" size="small" fill="outline" @click="changeKnowledgeStatus(doc, 'withdrawn')">撤回</ion-button>
+              <ion-button v-else-if="doc.status === 'draft' || doc.status === 'withdrawn'" size="small" @click="changeKnowledgeStatus(doc, 'published')">发布</ion-button>
+              <ion-button v-if="doc.status === 'failed' || doc.status === 'processing'" size="small" fill="outline" :disabled="knowledgeUploading" @click="reprocessKnowledge(doc)">重新解析</ion-button>
+              <ion-button size="small" fill="clear" color="danger" @click="confirmDeleteKnowledge(doc)">删除</ion-button>
+            </div>
+          </ion-item><ion-item v-if="!knowledgeDocs.length"><ion-label class="ion-text-center">还没有知识文档，上传第一份资料让顾客问答更专业</ion-label></ion-item></ion-list>
+        </div>
+      </ion-card-content></ion-card>
+
       <ion-card><ion-card-header><ion-card-title>平台 AI 服务</ion-card-title><ion-card-subtitle>智售引擎统一提供售前问答服务，无需在门店设备配置 API Key。</ion-card-subtitle></ion-card-header><ion-card-content><ion-item lines="none"><ion-icon slot="start" :icon="sparkles" color="success" /><ion-label><h3>平台托管 AI</h3><p>顾客问答受门店状态、公开内容与平台额度保护。</p></ion-label><ion-badge slot="end" color="success">已托管</ion-badge></ion-item></ion-card-content></ion-card>
     </ion-content>
   </ion-page>
@@ -18,8 +38,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import QRCode from 'qrcode';
-import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonItem, IonLabel, IonInput, IonTextarea, IonButton, IonNote, IonToggle, IonIcon, IonSpinner, IonBadge, IonList } from '@ionic/vue';
-import { copyOutline, downloadOutline, documentTextOutline, cloudUploadOutline, sparkles } from 'ionicons/icons';
+import { onIonViewWillEnter, IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent, IonItem, IonLabel, IonInput, IonTextarea, IonButton, IonNote, IonToggle, IonIcon, IonSpinner, IonBadge, IonList, alertController } from '@ionic/vue';
+import { copyOutline, downloadOutline, documentTextOutline, cloudUploadOutline, sparkles, libraryOutline } from 'ionicons/icons';
 import { storeProfile, promotions } from '@/services/data';
 import { saveProfile, loadPublicServiceSettings, savePublicServiceSettings } from '@/services/store.service';
 import { setPromotionActive } from '@/services/promotion.service';
@@ -27,8 +47,9 @@ import { publicStoreUrl } from '@/lib/platform-config';
 import { isDemoMode } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
 import { parseProductFile, importProducts, productTemplate, type ImportError } from '@/services/product-import.service';
+import { listKnowledgeDocuments, uploadKnowledgeDocument, runKnowledgeIngest, setKnowledgeDocumentStatus, deleteKnowledgeDocument, KNOWLEDGE_ACCEPT, KNOWLEDGE_MAX_BYTES } from '@/services/knowledge-admin.service';
 import { showToast } from '@/composables/useToast';
-import type { Promotion } from '@/types';
+import type { KnowledgeDocument, KnowledgeDocumentStatus, Promotion } from '@/types';
 
 const { currentStore } = useAuth(); const profile = reactive({ ...storeProfile.value }); const publicEnabled = ref(true); const serviceStatus = ref<'active' | 'suspended'>('active'); const qrDataUrl = ref(''); const fileInput = ref<HTMLInputElement | null>(null); const importing = ref(false); const savingProfile = ref(false); const importMessage = ref(''); const importErrors = ref<ImportError[]>([]); const isDemo = isDemoMode;
 const storeUrl = computed(() => publicStoreUrl(currentStore.value?.slug || 'demo-store')); const serviceLabel = computed(() => !publicEnabled.value || serviceStatus.value === 'suspended' ? '顾客入口已暂停，扫码会显示服务暂停页。' : '顾客扫码后可查看商品、促销并进行售前问答。');
@@ -42,5 +63,17 @@ function downloadQr() { if (qrDataUrl.value) triggerDownload(qrDataUrl.value, `$
 function downloadTemplate() { triggerDownload(URL.createObjectURL(productTemplate()), 'smart-sale-products-template.csv'); }
 function chooseFile() { fileInput.value?.click(); }
 async function handleFile(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; importing.value = true; importMessage.value = ''; importErrors.value = []; try { const rows = await parseProductFile(file); const result = await importProducts(rows); importErrors.value = result.errors; importMessage.value = result.errors.length ? `导入前校验发现 ${result.errors.length} 个问题，请修正后重试。` : `已成功导入 ${result.imported} 个商品。`; } catch (error) { importMessage.value = error instanceof Error ? error.message : '导入失败，请重试'; importErrors.value = [{ row: 0, message: importMessage.value }]; } finally { importing.value = false; (event.target as HTMLInputElement).value = ''; } }
-onMounted(() => { void refresh(); }); onIonViewWillEnter(() => { void refresh(); });
+onMounted(() => { void refresh(); }); onIonViewWillEnter(() => { void refresh(); if (!isDemo) void loadKnowledge(); });
+
+const knowledgeAccept = KNOWLEDGE_ACCEPT; const knowledgeFileInput = ref<HTMLInputElement | null>(null); const knowledgeUploading = ref(false); const knowledgeMessage = ref(''); const knowledgeMessageColor = ref<'success' | 'danger'>('success'); const knowledgeDocs = ref<KnowledgeDocument[]>([]);
+function knowledgeStatusLabel(status: KnowledgeDocumentStatus): string { return { processing: '处理中', draft: '草稿', published: '已发布', failed: '解析失败', withdrawn: '已撤回' }[status]; }
+function knowledgeStatusColor(status: KnowledgeDocumentStatus): string { return { processing: 'warning', draft: 'medium', published: 'success', failed: 'danger', withdrawn: 'medium' }[status]; }
+function formatBytes(bytes: number): string { if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`; if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`; return `${bytes} B`; }
+async function loadKnowledge() { try { knowledgeDocs.value = await listKnowledgeDocuments(); } catch { knowledgeMessage.value = '知识库读取失败，请稍后重试'; knowledgeMessageColor.value = 'danger'; } }
+function chooseKnowledgeFile() { knowledgeFileInput.value?.click(); }
+async function handleKnowledgeFile(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; knowledgeUploading.value = true; knowledgeMessage.value = ''; try { if (file.size > KNOWLEDGE_MAX_BYTES) throw new Error('文件超过 10 MB 上限，请先拆分或压缩'); const document = await uploadKnowledgeDocument(file); if (document.status === 'failed') { knowledgeMessage.value = `「${document.fileName}」已上传但解析失败，可稍后重试`; knowledgeMessageColor.value = 'danger'; } else { knowledgeMessage.value = `「${document.fileName}」已上传并解析完成，发布后顾客问答即可引用`; knowledgeMessageColor.value = 'success'; } await loadKnowledge(); } catch (error) { knowledgeMessage.value = error instanceof Error ? error.message : '上传失败，请重试'; knowledgeMessageColor.value = 'danger'; } finally { knowledgeUploading.value = false; (event.target as HTMLInputElement).value = ''; } }
+async function changeKnowledgeStatus(document: KnowledgeDocument, status: 'published' | 'withdrawn') { try { await setKnowledgeDocumentStatus(document.id, status); await showToast(status === 'published' ? `「${document.fileName}」已发布，顾客问答可引用` : `「${document.fileName}」已撤回`, 'success'); await loadKnowledge(); } catch (error) { await showToast(error instanceof Error ? error.message : '状态更新失败', 'danger'); } }
+async function reprocessKnowledge(document: KnowledgeDocument) { knowledgeUploading.value = true; try { await runKnowledgeIngest(document.id); await showToast(`「${document.fileName}」解析完成，可点击发布`, 'success'); await loadKnowledge(); } catch (error) { await showToast(error instanceof Error ? error.message : '解析失败，请重试', 'danger'); await loadKnowledge(); } finally { knowledgeUploading.value = false; } }
+async function confirmDeleteKnowledge(document: KnowledgeDocument) { const dialog = await alertController.create({ header: '删除知识文档', message: `确定删除「${document.fileName}」吗？删除后顾客问答不再引用该内容。`, buttons: [{ text: '取消', role: 'cancel' }, { text: '删除', role: 'destructive', handler: () => void doDeleteKnowledge(document) }] }); await dialog.present(); }
+async function doDeleteKnowledge(document: KnowledgeDocument) { try { await deleteKnowledgeDocument(document); await showToast('知识文档已删除', 'success'); await loadKnowledge(); } catch (error) { await showToast(error instanceof Error ? error.message : '删除失败，请重试', 'danger'); } }
 </script>
