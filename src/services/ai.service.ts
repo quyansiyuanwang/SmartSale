@@ -120,7 +120,16 @@ async function callDemoGateway(question: string, signal?: AbortSignal, messages:
 export async function askBuyerQuestion(question: string, signal?: AbortSignal, messages: BuyerChatMessage[] = []): Promise<AiReply> {
   const q = question.trim();
   if (!q) return { text: '请先告诉我您想找什么，比如「16mm膨胀螺丝在哪」。', demo: true, source: 'local' };
-  if (!isDemoMode) return { text: await callGateway(q, signal, messages), demo: false, source: 'ai' };
+  if (!isDemoMode) {
+    try {
+      return { text: await callGateway(q, signal, messages), demo: false, source: 'ai' };
+    } catch (error) {
+      if ((error as DOMException)?.name === 'AbortError') throw error;
+      // A missing provider key or a temporarily unavailable Edge Function
+      // should not block a competition demo when catalog data is available.
+      return fallbackAnswer(q);
+    }
+  }
   if (getPlatformConfig().demoAiEnabled) {
     try {
       return { text: await callDemoGateway(q, signal, messages), demo: true, source: 'ai' };

@@ -16,7 +16,10 @@ function chunkText(text: string): string[] {
 async function extractText(bytes: ArrayBuffer, mime: string): Promise<string> {
   if (mime === 'text/plain' || mime === 'text/markdown' || mime === 'text/x-markdown') return new TextDecoder().decode(bytes);
   if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') { const mammoth = await import('https://esm.sh/mammoth@1.8.0'); const result = await mammoth.extractRawText({ arrayBuffer: bytes }); return result.value; }
-  if (mime === 'application/pdf') { const pdfjs = await import('https://esm.sh/pdfjs-dist@4.6.82/legacy/build/pdf.mjs'); const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false, isEvalSupported: false }).promise; const pages: string[] = []; for (let pageNo = 1; pageNo <= pdf.numPages; pageNo += 1) { const page = await pdf.getPage(pageNo); const content = await page.getTextContent(); pages.push(content.items.map((item: { str?: string }) => item.str ?? '').join(' ')); } return pages.join('\n'); }
+  // pdfjs-dist depends on a native canvas module that cannot boot in the
+  // Supabase Edge Runtime. Keep PDF uploads explicit rather than leaving them
+  // stuck in `processing`; Markdown/TXT/DOCX are sufficient for the demo.
+  if (mime === 'application/pdf') throw new Error('当前本地 Edge Runtime 暂不支持 PDF 解析，请使用 Markdown、TXT 或 DOCX');
   throw new Error(`Unsupported file type: ${mime}`);
 }
 

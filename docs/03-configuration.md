@@ -30,6 +30,16 @@ VITE_DEMO_MODE=false
 
 ## Edge Function 密钥
 
+根目录 `.env.local` 只放 Supabase URL/anon key 等浏览器公开配置，不能放聊天或向量 API 密钥。需要运行本地真实 `ai-chat` / `knowledge-ingest` 时：
+
+```powershell
+Copy-Item supabase/functions/.env.example supabase/functions/.env
+# 编辑 supabase/functions/.env，填入 DEEPSEEK_API_KEY 和 EMBEDDING_API_KEY
+npx supabase functions serve --env-file supabase/functions/.env
+```
+
+没有这些密钥时，`ai-chat` 会返回 `ai_unavailable`；前端顾客问答会自动回退到本地规则回答。知识文档会显示解析失败原因，不会永久停留在“处理中”。
+
 | 变量 | 必填条件 | 用途 |
 | --- | --- | --- |
 | `DEEPSEEK_API_KEY` | 默认必填 | 默认 `deepseek` 聊天模型的凭证 |

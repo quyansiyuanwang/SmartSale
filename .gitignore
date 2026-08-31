@@ -18,6 +18,7 @@ log.txt
 npm-debug.log*
 .env.demo.local
 .env.local
+/supabase/functions/.env
 /goal/local/
 /supabase/.temp/
 /supabase/.branches/
