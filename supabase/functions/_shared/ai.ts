@@ -12,9 +12,10 @@ export function providerSettings(model: ModelConfig) {
 }
 
 export async function embed(text: string): Promise<number[]> {
-  const baseUrl = required('EMBEDDING_BASE_URL').replace(/\/+$/, '');
-  const response = await fetch(`${baseUrl}/embeddings`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${required('EMBEDDING_API_KEY')}` }, body: JSON.stringify({ model: required('EMBEDDING_MODEL'), input: text, dimensions: 1536 }) });
-  if (!response.ok) throw new Error(`Embedding provider returned HTTP ${response.status}`);
+  const configuredUrl = required('EMBEDDING_BASE_URL').replace(/\/+$/, '');
+  const endpoint = configuredUrl.endsWith('/embeddings') ? configuredUrl : `${configuredUrl}/embeddings`;
+  const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${required('EMBEDDING_API_KEY')}` }, body: JSON.stringify({ model: required('EMBEDDING_MODEL'), input: text, dimensions: 1536 }) });
+  if (!response.ok) throw new Error(`Embedding provider returned HTTP ${response.status} (${endpoint})`);
   const data = await response.json(); const vector = data?.data?.[0]?.embedding;
   if (!Array.isArray(vector) || vector.length !== 1536) throw new Error('Embedding provider must return a 1536-dimensional vector');
   return vector;

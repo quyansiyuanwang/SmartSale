@@ -46,7 +46,7 @@ npx supabase functions serve --env-file supabase/functions/.env
 | `DEEPSEEK_BASE_URL` | 否 | 默认 `https://api.deepseek.com/v1` |
 | `DEFAULT_CHAT_MODEL` | 否 | 新门店默认模型，默认 `deepseek-chat` |
 | `EMBEDDING_API_KEY` | 知识库 RAG 必填 | 向量接口凭证 |
-| `EMBEDDING_BASE_URL` | 知识库 RAG 必填 | 必须支持 `/embeddings` |
+| `EMBEDDING_BASE_URL` | 知识库 RAG 必填 | Embedding API 根地址；代码会自动追加 `/embeddings`，也兼容已带该后缀的地址 |
 | `EMBEDDING_MODEL` | 知识库 RAG 必填 | 返回 1536 维向量的模型名 |
 | `OPENAI_COMPATIBLE_API_KEY` | 使用兼容模型时必填 | 非 DeepSeek 聊天 Provider 凭证 |
 | `OPENAI_COMPATIBLE_BASE_URL` | 使用兼容模型时必填 | 兼容 Provider 的 API 根地址 |
@@ -55,6 +55,8 @@ npx supabase functions serve --env-file supabase/functions/.env
 Supabase 托管函数还会自动取得 `SUPABASE_URL`、`SUPABASE_ANON_KEY` 与 `SUPABASE_SERVICE_ROLE_KEY`。不要将 `SUPABASE_SERVICE_ROLE_KEY`、任意聊天/向量 API Key 放入前端或 GitHub Variables。
 
 顾客聊天在向量检索暂不可用时仍会尝试基于商品和促销生成回答；但知识库导入和公开知识检索需要完整的 Embedding 配置，生产环境应始终配置。
+
+例如智谱 Embedding 3 应填写 `https://open.bigmodel.cn/api/paas/v4`，不要填写成聊天模型地址，也不要重复拼接 `/embeddings`。如果 API Key 曾经出现在终端或聊天记录中，请在供应商控制台立即轮换。
 
 ## Supabase 控制台配置
 
