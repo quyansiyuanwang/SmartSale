@@ -12,6 +12,7 @@
     <ion-content :fullscreen="true">
       <div v-if="publicStoreStatus === 'suspended'" class="public-status"><ion-icon :icon="pauseCircle" /><h2>门店服务暂时不可用</h2><p>请联系门店工作人员，或稍后再试。</p></div>
       <div v-else-if="publicStoreStatus === 'not-found'" class="public-status"><ion-icon :icon="alertCircle" /><h2>未找到此门店</h2><p>请确认二维码或公开链接是否正确。</p></div>
+      <div v-else-if="publicStoreStatus === 'invalid-token'" class="public-status"><ion-icon :icon="alertCircle" /><h2>顾客入口已失效</h2><p>请扫描门店最新二维码进入，直接输入门店地址无法访问。</p></div>
       <template v-else>
       <div class="buyer-hero">
         <h2>{{ storeProfile.welcome }}</h2>
@@ -181,9 +182,16 @@ function lineBreak(text: string): string {
 
 onMounted(async () => {
   const slug = typeof route.params.slug === 'string' ? route.params.slug : new URLSearchParams(window.location.search).get('store');
-  if (slug) {
+  const token = new URLSearchParams(window.location.search).get('token') || undefined;
+  if (!slug) {
+    publicStoreStatus.value = 'invalid-token';
+    msgs.value.push({ role: 'assistant', text: '请扫描门店最新二维码进入，缺少门店和访问令牌。', source: 'error' });
+  } else if (slug && !token) {
+    publicStoreStatus.value = 'invalid-token';
+    msgs.value.push({ role: 'assistant', text: '请扫描门店最新二维码进入，直接输入门店地址无法访问。', source: 'error' });
+  } else if (slug) {
     rememberPublicStore(slug);
-    try { await loadPublicStore(slug); } catch (error) { msgs.value.push({ role: 'assistant', text: error instanceof Error ? error.message : '门店信息暂不可用', source: 'error' }); }
+    try { await loadPublicStore(slug, token); } catch (error) { msgs.value.push({ role: 'assistant', text: error instanceof Error ? error.message : '门店信息暂不可用', source: 'error' }); }
   }
 });
 </script>

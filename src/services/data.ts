@@ -4,14 +4,14 @@ import { KEYS, loadJSON, saveJSON, removeKey } from './storage.service';
 import { defaultProfile, defaultLlm, seedProducts, seedPromotions, buildSeedSales } from './seed';
 import { isDemoMode, supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
-import { getPlatformConfig } from '@/lib/platform-config';
+import { getPlatformConfig, demoPublicAccessToken, isValidPublicAccessToken } from '@/lib/platform-config';
 
 export const products = ref<Product[]>([]); export const sales = ref<SaleRecord[]>([]); export const queries = ref<CustomerQuery[]>([]); export const promotions = ref<Promotion[]>([]);
 export const storeProfile = ref<StoreProfile>({ ...defaultProfile });
 // Retained only for backwards-compatible demo tests. Provider keys are never used in production.
 export const llmConfig = ref<LlmConfig>({ ...defaultLlm, apiKey: '' });
 export const loaded = ref(false); export const dataError = ref<string | null>(null);
-export const publicStoreStatus = ref<'active' | 'suspended' | 'not-found'>('active');
+export const publicStoreStatus = ref<'active' | 'suspended' | 'not-found' | 'invalid-token'>('active');
 
 const productFromRow = (row: any): Product => ({ id: row.id, name: row.name, barcode: row.barcode, category: row.category, buyPrice: Number(row.buy_price), price: Number(row.price), stock: row.stock, safeStock: row.safe_stock, location: row.location, desc: row.description, published: row.is_published !== false && row.published !== false, createdAt: row.created_at, updatedAt: row.updated_at });
 const productToRow = (product: Product, storeId: string) => ({ id: product.id.startsWith('p_') ? undefined : product.id, store_id: storeId, name: product.name, barcode: product.barcode, category: product.category, buy_price: product.buyPrice, price: product.price, stock: product.stock, safe_stock: product.safeStock, location: product.location, description: product.desc, is_published: product.published !== false, updated_at: product.updatedAt });
@@ -42,10 +42,11 @@ async function loadSupabase(): Promise<void> {
 }
 
 export async function loadAll(): Promise<void> { loaded.value=false; dataError.value=null; try { if (isDemoMode) await loadDemo(); else await loadSupabase(); } catch(error) { dataError.value=error instanceof Error?error.message:'数据加载失败'; products.value=[]; sales.value=[]; queries.value=[]; promotions.value=[]; } finally { loaded.value=true; } }
-export async function loadPublicStore(slug: string): Promise<void> {
-  publicStoreStatus.value = 'active'; if (isDemoMode) { await loadDemo(); const settings = await loadJSON<{ serviceStatus: 'active' | 'suspended'; publicEnabled: boolean }>(KEYS.publicService, { serviceStatus: 'active', publicEnabled: true }); if (!settings.publicEnabled || settings.serviceStatus === 'suspended') publicStoreStatus.value = 'suspended'; return; }
+export async function loadPublicStore(slug: string, token?: string): Promise<void> {
+  publicStoreStatus.value = 'active'; if (isDemoMode) { const expectedToken = await loadJSON<string>(KEYS.publicAccessToken, demoPublicAccessToken()); if (token && token !== expectedToken) { publicStoreStatus.value = 'invalid-token'; throw new Error('顾客入口令牌无效，请扫描门店最新二维码'); } await loadDemo(); const settings = await loadJSON<{ serviceStatus: 'active' | 'suspended'; publicEnabled: boolean }>(KEYS.publicService, { serviceStatus: 'active', publicEnabled: true }); if (!settings.publicEnabled || settings.serviceStatus === 'suspended') publicStoreStatus.value = 'suspended'; return; }
   const { supabaseUrl: base, supabaseAnonKey: key } = getPlatformConfig(); if (!base || !key) throw new Error('公开门店尚未配置');
-  const response = await fetch(`${base}/functions/v1/public-store?slug=${encodeURIComponent(slug)}`, { headers: { apikey: key } }); const payload = await response.json(); if (!response.ok) { if (payload?.error === 'store_suspended') { publicStoreStatus.value = 'suspended'; throw new Error('门店服务已暂停'); } if (payload?.error === 'store_not_found') { publicStoreStatus.value = 'not-found'; throw new Error('门店不存在'); } throw new Error('门店信息暂不可用'); }
+  if (!isValidPublicAccessToken(token)) { publicStoreStatus.value = 'invalid-token'; throw new Error('顾客入口令牌无效，请扫描门店最新二维码'); }
+  const response = await fetch(`${base}/functions/v1/public-store?slug=${encodeURIComponent(slug)}&token=${encodeURIComponent(token)}`, { headers: { apikey: key } }); const payload = await response.json(); if (!response.ok) { if (payload?.error === 'invalid_token') { publicStoreStatus.value = 'invalid-token'; throw new Error('顾客入口令牌无效，请扫描门店最新二维码'); } if (payload?.error === 'store_suspended') { publicStoreStatus.value = 'suspended'; throw new Error('门店服务已暂停'); } if (payload?.error === 'store_not_found') { publicStoreStatus.value = 'not-found'; throw new Error('门店不存在'); } throw new Error('门店信息暂不可用'); }
   storeProfile.value = { name: payload.store.name, address: payload.store.address, phone: payload.store.phone, hours: payload.store.hours, welcome: payload.store.welcome }; products.value = (payload.products ?? []).map((row: any) => productFromRow({ ...row, id: `public-${row.name}`, barcode: '', buy_price: 0, safe_stock: 0, created_at: '', updated_at: '' })); promotions.value = (payload.promotions ?? []).map((row: any, index: number) => promotionFromRow({ ...row, id: `public-promo-${index}`, active: true, created_at: '' }));
 }
 function storeId(): string | null { return useAuth().currentStore.value?.id ?? null; }

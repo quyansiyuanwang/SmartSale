@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonAvatar, IonIcon, IonList,
   IonItem, IonLabel, IonBadge, IonNote, IonButton, alertController } from '@ionic/vue';
 import { storefront, qrCode, chevronForward, warning, chatbubbleEllipses, settings, sparkles, layers, refresh, flash } from 'ionicons/icons';
@@ -84,11 +84,13 @@ import { isDemoMode } from '@/lib/supabase';
 import { showToast } from '@/composables/useToast';
 import { useAuth } from '@/composables/useAuth';
 import { publicStoreUrl } from '@/lib/platform-config';
+import { loadPublicAccessToken } from '@/services/store.service';
 
 const hasKey = computed(() => !isDemoMode || hasApiKey());
 const productionStorage = !isDemoMode;
 const { currentStore } = useAuth();
-const customerEntry = computed(() => isDemoMode ? '/s/demo-store' : publicStoreUrl(currentStore.value?.slug || ''));
+const customerEntry = ref('/');
+void loadPublicAccessToken().then((token) => { customerEntry.value = publicStoreUrl(isDemoMode ? 'demo-store' : (currentStore.value?.slug || ''), token); });
 
 async function confirmReset() {
   const alert = await alertController.create({

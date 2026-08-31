@@ -92,7 +92,8 @@ async function callGateway(question: string, signal?: AbortSignal, messages: Buy
   const slug = useAuth().currentStore.value?.slug || pathSlug || new URLSearchParams(window.location.search).get('store');
   if (!slug) throw new Error('未指定公开门店');
   const { supabaseUrl, supabaseAnonKey } = getPlatformConfig();
-  const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey }, body: JSON.stringify({ slug, question, messages: messages.slice(-6).map((message) => ({ role: message.role, content: message.text })) }), signal });
+  const token = new URLSearchParams(window.location.search).get('token');
+  const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey }, body: JSON.stringify({ slug, token, question, messages: messages.slice(-6).map((message) => ({ role: message.role, content: message.text })) }), signal });
   if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'store_suspended' ? '门店服务已暂停' : data?.error === 'ai_not_configured' ? '平台 AI 服务暂不可用' : 'AI 服务暂不可用，请稍后重试'); }
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let answer = '';
   let complete = false;

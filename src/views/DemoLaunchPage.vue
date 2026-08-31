@@ -14,7 +14,7 @@
             <span>商家端</span>
             <small>库存、销售与经营机会</small>
           </button>
-          <button class="demo-entry buyer" type="button" @click="go('/s/demo-store')">
+          <button class="demo-entry buyer" type="button" @click="go(buyerEntry)">
             <ion-icon :icon="chatbubbles" />
             <span>顾客端</span>
             <small>扫码导购与场景化问答</small>
@@ -49,11 +49,13 @@ import { chatbubbles, refresh, sparkles, storefront } from 'ionicons/icons';
 import { resetAll } from '@/services/data';
 import { runBuyerWorkflow } from '@/services/agent-orchestrator.service';
 import { showToast } from '@/composables/useToast';
+import { demoPublicAccessToken, publicStoreUrl } from '@/lib/platform-config';
 
 const router = useRouter();
 const running = ref(false);
 
 function go(path: string) { void router.push(path); }
+const buyerEntry = publicStoreUrl('demo-store', demoPublicAccessToken());
 
 async function runFlow() {
   if (running.value) return;

@@ -12,7 +12,9 @@ export interface PlatformConfig {
 
 function trimSlash(value: string): string { return value.replace(/\/+$/, ''); }
 const LAST_PUBLIC_STORE_KEY = 'ss.lastPublicStoreSlug';
+const DEMO_PUBLIC_TOKEN_KEY = 'ss.demoPublicAccessToken';
 const validSlug = /^[a-z0-9-]{3,64}$/;
+const validPublicToken = /^[A-Za-z0-9_-]{16,128}$/;
 
 export function getPlatformConfig(): PlatformConfig {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() ?? '';
@@ -33,8 +35,25 @@ export function getPlatformConfig(): PlatformConfig {
   };
 }
 
-export function publicStoreUrl(slug: string): string {
-  return `${getPlatformConfig().publicAppUrl}/s/${encodeURIComponent(slug)}`;
+export function publicStoreUrl(slug: string, token?: string): string {
+  const url = `${getPlatformConfig().publicAppUrl}/s/${encodeURIComponent(slug)}`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
+}
+
+/** Generates the local demo token once; cloud tokens come from the store row. */
+export function demoPublicAccessToken(): string {
+  if (typeof window === 'undefined') return 'demo-public-token-2026';
+  const existing = window.localStorage.getItem(DEMO_PUBLIC_TOKEN_KEY);
+  if (existing && validPublicToken.test(existing)) return existing;
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  const token = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  window.localStorage.setItem(DEMO_PUBLIC_TOKEN_KEY, token);
+  return token;
+}
+
+export function isValidPublicAccessToken(token: unknown): token is string {
+  return typeof token === 'string' && validPublicToken.test(token);
 }
 
 export function rememberPublicStore(slug: string): void {

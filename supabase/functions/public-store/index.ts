@@ -4,16 +4,20 @@ const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SE
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(request) });
   try {
-    const slug = new URL(request.url).searchParams.get('slug');
+    const params = new URL(request.url).searchParams;
+    const slug = params.get('slug');
+    const token = params.get('token');
     if (!slug || !/^[a-z0-9-]{3,64}$/.test(slug)) return json({ error: 'invalid_store' }, 400, request);
-    const { data: store } = await admin.from('stores').select('id,name,slug,address,phone,hours,welcome,service_status,public_enabled').eq('slug', slug).single();
+    const { data: store } = await admin.from('stores').select('id,name,slug,address,phone,hours,welcome,service_status,public_enabled,public_access_token').eq('slug', slug).single();
     if (!store) return json({ error: 'store_not_found' }, 404, request);
+    if (!token || token !== store.public_access_token) return json({ error: 'invalid_token' }, 403, request);
     if (store.service_status !== 'active' || !store.public_enabled) return json({ error: 'store_suspended' }, 423, request);
     const [{ data: products }, { data: promotions }] = await Promise.all([
       admin.from('products').select('name,category,price,stock,location,description').eq('store_id', store.id).eq('is_published', true).limit(200),
       admin.from('promotions').select('title,detail').eq('store_id', store.id).eq('active', true).limit(50)
     ]);
-    return json({ store, products: products ?? [], promotions: promotions ?? [] }, 200, request);
+    const { public_access_token: _token, ...publicStore } = store;
+    return json({ store: publicStore, products: products ?? [], promotions: promotions ?? [] }, 200, request);
   } catch (error) {
     return json({ error: 'public_store_unavailable', message: error instanceof Error ? error.message : 'unknown' }, 503, request);
   }

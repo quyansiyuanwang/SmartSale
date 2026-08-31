@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { alertController, IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonChip, IonContent, IonIcon, IonButton } from '@ionic/vue';
@@ -58,11 +58,13 @@ import { showToast } from '@/composables/useToast';
 import { useAuth } from '@/composables/useAuth';
 import { isDemoMode } from '@/lib/supabase';
 import { publicStoreUrl } from '@/lib/platform-config';
+import { loadPublicAccessToken } from '@/services/store.service';
 
 const router = useRouter();
 const insights = computed(() => businessInsights());
 const { currentStore } = useAuth();
-const customerEntry = computed(() => isDemoMode ? '/s/demo-store' : publicStoreUrl(currentStore.value?.slug || ''));
+const customerEntry = ref('/');
+void loadPublicAccessToken().then((token) => { customerEntry.value = publicStoreUrl(isDemoMode ? 'demo-store' : (currentStore.value?.slug || ''), token); });
 
 function goRestock() {
   void router.push('/alerts');

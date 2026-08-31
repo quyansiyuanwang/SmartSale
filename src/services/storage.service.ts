@@ -8,6 +8,7 @@ export const KEYS = {
   queries: 'ss.queries',
   promotions: 'ss.promotions',
   publicService: 'ss.publicService',
+  publicAccessToken: 'ss.publicAccessToken',
   seeded: 'ss.seeded.v1'
 } as const;
 

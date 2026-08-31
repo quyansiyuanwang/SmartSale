@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
   IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle, IonCardSubtitle, IonCardContent,
@@ -126,6 +126,7 @@ import { onboardingPending as isOnboardingPending, onboardingSteps } from '@/ser
 import { useAuth } from '@/composables/useAuth';
 import { isDemoMode } from '@/lib/supabase';
 import { publicStoreUrl } from '@/lib/platform-config';
+import { loadPublicAccessToken } from '@/services/store.service';
 
 const today = computed(() => todaySummary());
 const lowList = computed(() => lowStock());
@@ -139,7 +140,9 @@ const todayQueries = computed(() => queries.value.filter((q) => {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }));
 const { currentStore } = useAuth();
-const customerEntry = computed(() => isDemoMode ? '/s/demo-store' : publicStoreUrl(currentStore.value?.slug || ''));
+const customerEntry = ref('/');
+async function refreshCustomerEntry() { customerEntry.value = publicStoreUrl(isDemoMode ? 'demo-store' : (currentStore.value?.slug || ''), await loadPublicAccessToken()); }
+void refreshCustomerEntry();
 
 function todayText(): string {
   const d = new Date();
