@@ -38,7 +38,7 @@ Copy-Item supabase/functions/.env.example supabase/functions/.env
 npx supabase functions serve --env-file supabase/functions/.env
 ```
 
-没有这些密钥时，`ai-chat` 会返回 `ai_unavailable`；前端顾客问答会自动回退到本地规则回答。知识文档会显示解析失败原因，不会永久停留在“处理中”。
+没有这些密钥时，`ai-chat` 会返回 `ai_unavailable`；前端顾客问答会自动回退到本地规则回答。知识文档会显示解析失败原因，不会永久停留在“处理中”，补齐密钥后点击“重新解析”即可。
 
 | 变量 | 必填条件 | 用途 |
 | --- | --- | --- |

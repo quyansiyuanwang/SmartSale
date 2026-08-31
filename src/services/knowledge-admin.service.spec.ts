@@ -129,6 +129,7 @@ describe('知识库文档管理', () => {
 
   it('解析函数失败时向上抛出可读错误', async () => {
     functionsInvoke.mockResolvedValue({ data: null, error: { message: 'boom' } });
+    from.mockImplementation(() => makeBuilder({ error: null }, { error: null }, { error: null }));
     await expect(runKnowledgeIngest('doc-1')).rejects.toThrow('文档解析失败');
   });
 });

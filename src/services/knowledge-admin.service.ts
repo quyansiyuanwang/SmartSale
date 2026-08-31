@@ -95,8 +95,14 @@ export async function uploadKnowledgeDocument(file: File): Promise<KnowledgeDocu
 }
 
 export async function runKnowledgeIngest(documentId: string): Promise<void> {
-  const { error } = await requireClient().functions.invoke('knowledge-ingest', { body: { documentId } });
-  if (error) throw new Error('文档解析失败，可稍后重试或更换文件');
+  const client = requireClient();
+  const { error } = await client.functions.invoke('knowledge-ingest', { body: { documentId } });
+  if (error) {
+    // If the worker never booted, it cannot update the row itself. Avoid a
+    // document remaining in `processing` forever and expose a retryable state.
+    await client.from('knowledge_documents').update({ status: 'failed', error: error.message || '文档解析服务不可用' }).eq('id', documentId);
+    throw new Error('文档解析失败，可稍后重试或更换文件');
+  }
 }
 
 export async function setKnowledgeDocumentStatus(id: string, status: Extract<KnowledgeDocumentStatus, 'draft' | 'published' | 'withdrawn'>): Promise<KnowledgeDocument> {
