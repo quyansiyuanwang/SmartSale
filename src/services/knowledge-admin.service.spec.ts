@@ -20,7 +20,7 @@ vi.mock('@/lib/supabase', () => ({
   isDemoMode: false
 }));
 
-import { deleteKnowledgeDocument, listKnowledgeDocuments, runKnowledgeIngest, setKnowledgeDocumentStatus, uploadKnowledgeDocument, validateKnowledgeFile, KNOWLEDGE_MAX_BYTES } from './knowledge-admin.service';
+import { deleteKnowledgeDocument, listKnowledgeDocuments, runKnowledgeIngest, setKnowledgeDocumentStatus, storageSafeFileName, uploadKnowledgeDocument, validateKnowledgeFile, KNOWLEDGE_MAX_BYTES } from './knowledge-admin.service';
 import type { KnowledgeDocument } from '@/types';
 
 const docRow = (status: string) => ({
@@ -68,13 +68,18 @@ describe('知识库文档管理', () => {
     expect(() => validateKnowledgeFile(new File(['x'], 'a.exe', { type: 'application/octet-stream' }))).toThrow('PDF');
   });
 
+  it('将中文文件名转换为 ASCII Storage 名称并保留扩展名', () => {
+    expect(storageSafeFileName('知识库-水龙头安装说明.md')).toMatch(/^document\.md$/);
+    expect(storageSafeFileName('install guide (v2).PDF')).toBe('install_guide_v2.pdf');
+  });
+
   it('上传后调用解析并把状态刷新为可发布草稿', async () => {
     from.mockImplementation(() => makeBuilder({ error: null }, { data: docRow('processing'), error: null }, { data: docRow('draft'), error: null }));
     const file = new File(['安装步骤'], '水龙头安装指南.pdf', { type: 'application/pdf' });
     const document = await uploadKnowledgeDocument(file);
     expect(document.status).toBe('draft');
     expect(storageUpload).toHaveBeenCalledTimes(1);
-    expect((storageUpload.mock.calls as unknown[][])[0][0]).toMatch(/^store-1\/\d+-水龙头安装指南\.pdf$/);
+    expect((storageUpload.mock.calls as unknown[][])[0][0]).toMatch(/^store-1\/\d+-knowledge_[a-z0-9]+_[a-z0-9]+-document\.pdf$/);
     expect(functionsInvoke).toHaveBeenCalledWith('knowledge-ingest', { body: { documentId: 'doc-1' } });
   });
 

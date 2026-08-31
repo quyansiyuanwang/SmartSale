@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
+import { uid } from './storage.service';
 import type { KnowledgeDocument, KnowledgeDocumentStatus } from '@/types';
 
 export const KNOWLEDGE_ACCEPT = '.pdf,.docx,.txt,.md,.markdown';
@@ -7,6 +8,22 @@ export const KNOWLEDGE_MAX_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_EXTENSIONS = /\.(pdf|docx|txt|md|markdown)$/i;
 const DOC_COLUMNS = 'id,file_name,storage_path,mime_type,size_bytes,status,error,created_at';
+
+/** Storage object keys are kept ASCII-only; the original name remains in file_name. */
+export function storageSafeFileName(fileName: string): string {
+  const match = fileName.match(/\.([a-z0-9]+)$/i);
+  const extension = match ? `.${match[1].toLowerCase()}` : '';
+  const base = fileName
+    .slice(0, match ? -match[0].length : undefined)
+    .normalize('NFKD')
+    .split('')
+    .filter((character) => character.charCodeAt(0) <= 127)
+    .join('')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/^[_\-.]+|[_\-.]+$/g, '')
+    .slice(0, 80);
+  return `${base || 'document'}${extension}`;
+}
 
 function requireClient(): NonNullable<typeof supabase> {
   if (!supabase) throw new Error('平台服务尚未配置');
@@ -54,8 +71,8 @@ export async function uploadKnowledgeDocument(file: File): Promise<KnowledgeDocu
   validateKnowledgeFile(file);
   const client = requireClient();
   const storeId = requireStoreId();
-  const safeName = file.name.replace(/[\\/]+/g, '_');
-  const path = `${storeId}/${Date.now()}-${safeName}`;
+  const safeName = storageSafeFileName(file.name);
+  const path = `${storeId}/${Date.now()}-${uid('knowledge')}-${safeName}`;
   const { error: uploadError } = await client.storage.from('knowledge').upload(path, file, { contentType: file.type || 'application/octet-stream' });
   if (uploadError) throw new Error('文件上传失败，请重试');
   const { data, error } = await client
