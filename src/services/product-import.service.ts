@@ -13,7 +13,12 @@ function asNumber(value: unknown, fallback = 0): number { const numeric = Number
 function normalize(row: Record<string, unknown>): ProductInput { const input: Partial<ProductInput> = {}; Object.entries(row).forEach(([key, value]) => { const target = headers[key.trim()]; if (target) (input as Record<string, unknown>)[target] = value; }); return { name: asText(input.name), barcode: asText(input.barcode), category: asText(input.category), buyPrice: asNumber(input.buyPrice), price: asNumber(input.price, Number.NaN), stock: asNumber(input.stock), safeStock: asNumber(input.safeStock), location: asText(input.location), desc: asText(input.desc) }; }
 
 export async function parseProductFile(file: File): Promise<ProductInput[]> {
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' }); const first = workbook.SheetNames[0]; if (!first) throw new Error('文件中没有可导入的工作表');
+  const bytes = await file.arrayBuffer();
+  const isCsv = file.type === 'text/csv' || /\.csv$/i.test(file.name);
+  const workbook = isCsv
+    ? XLSX.read(new TextDecoder('utf-8').decode(bytes), { type: 'string' })
+    : XLSX.read(bytes, { type: 'array' });
+  const first = workbook.SheetNames[0]; if (!first) throw new Error('文件中没有可导入的工作表');
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[first], { defval: '' }); if (!rows.length) throw new Error('文件中没有商品数据'); if (rows.length > 1000) throw new Error('单次最多导入 1000 个商品'); return rows.map(normalize);
 }
 
