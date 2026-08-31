@@ -33,7 +33,7 @@
           <div class="metric-tile"><span>最近运行</span><strong>{{ activeRun ? activeRun.events.length : 0 }}</strong><small>个工作流节点</small></div>
           <div class="metric-tile"><span>知识命中</span><strong>{{ knowledgeHits.length }}</strong><small>商品 / 文档 / 图谱</small></div>
           <div class="metric-tile"><span>协同状态</span><strong class="metric-online">{{ collaborationStatus }}</strong><small>双 Agent 事件总线</small></div>
-          <div class="metric-tile"><span>端侧覆盖</span><strong>3</strong><small>Android · iOS · Web</small></div>
+          <div class="metric-tile"><span>端侧覆盖</span><strong>4</strong><small>Android · iOS · 鸿蒙 Web · Web</small></div>
         </section>
 
         <section class="architecture-map" aria-label="云端与端侧架构">
@@ -59,7 +59,7 @@
               <ion-icon class="agent-arrow" :icon="arrowForward" />
             </div>
           </div>
-          <div class="codebase-strip"><ion-icon :icon="codeSlash" /><div><strong>统一应用代码库</strong><span>Vue 3 + Ionic + Capacitor · 本地 Demo 与云端模式可切换</span></div><div class="platform-pills"><span>Android</span><span>iOS</span><span>Web</span></div></div>
+          <div class="codebase-strip"><ion-icon :icon="codeSlash" /><div><strong>全平台统一代码库</strong><span>Vue 3 + Ionic + Capacitor · 一套代码适配 Android、iOS、鸿蒙 Web 与浏览器</span></div><div class="platform-pills"><span>Android</span><span>iOS</span><span>鸿蒙 Web</span><span>Web</span></div></div>
         </section>
 
         <section class="trace-grid">

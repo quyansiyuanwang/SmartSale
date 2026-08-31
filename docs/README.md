@@ -13,6 +13,7 @@
 | 日常检查、故障定位与回滚 | [运维手册](06-operations.md) |
 | 构建 Android/iOS 与 GitHub Release | [发布手册](07-release.md) |
 | 本机一键运行竞赛 Demo | [本机演示](08-local-demo.md) |
+| 竞赛验收与现场演练 | [竞赛验收手册](10-competition-acceptance.md) |
 | Cloudflare Pages、GitHub Pages、腾讯云 EdgeOne 静态发布 | [静态网站部署](09-static-hosting.md) |
 
 ## 三个正式地址

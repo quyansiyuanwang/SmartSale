@@ -205,6 +205,7 @@ npm test   # Vitest：存储 CRUD/种子重置、扣库存与预警、周报/滞
 - 商家通过 Supabase Auth 登录，数据按门店 RLS 隔离；多员工切换、会员和支付不在本次范围。
 - 本机 Demo 使用 Capacitor Preferences；生产数据使用 Supabase Postgres、Auth、Storage 与 Edge Functions。
 - 买家端以 Web/PWA 替代微信小程序（Capacitor 不支持小程序）。
+- 鸿蒙设备可通过浏览器/PWA 访问统一 Web 代码；本 Demo 不包含独立鸿蒙原生工程。
 - Android / iOS 原生包由 GitHub Actions 构建：Android 使用 Ubuntu runner，iOS 使用 macOS runner；本地 iOS 构建仍需 macOS 与 Xcode。
 
 ## 文档

@@ -17,6 +17,9 @@ $RECYCLE.BIN/
 log.txt
 npm-debug.log*
 .env.demo.local
+.env.local
+/goal/local/
+/supabase/.temp/
 
 /.idea
 /.ionic
