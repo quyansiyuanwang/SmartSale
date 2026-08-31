@@ -14,6 +14,7 @@
 | 构建 Android/iOS 与 GitHub Release | [发布手册](07-release.md) |
 | 本机一键运行竞赛 Demo | [本机演示](08-local-demo.md) |
 | 竞赛验收与现场演练 | [竞赛验收手册](10-competition-acceptance.md) |
+| 商品、知识库与现场演示素材 | [演示素材目录](demo-materials/演示素材使用说明.md) |
 | Cloudflare Pages、GitHub Pages、腾讯云 EdgeOne 静态发布 | [静态网站部署](09-static-hosting.md) |
 
 ## 三个正式地址
