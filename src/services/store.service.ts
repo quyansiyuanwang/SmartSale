@@ -4,44 +4,104 @@ import { isDemoMode, supabase } from '@/lib/supabase';
 import { useAuth } from '@/composables/useAuth';
 import { KEYS, loadJSON, saveJSON } from './storage.service';
 import { demoPublicAccessToken } from '@/lib/platform-config';
+import { validateStoreProfile } from './store-profile-validation';
 
 export interface PublicServiceSettings { serviceStatus: 'active' | 'suspended'; publicEnabled: boolean; }
 
 const DEFAULT_PUBLIC_SERVICE: PublicServiceSettings = { serviceStatus: 'active', publicEnabled: true };
+export const PUBLIC_ACCESS_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const TOKEN_RENEW_BEFORE_MS = 60 * 1000;
+let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+let visibilityListenerRegistered = false;
+
+export interface PublicAccessTokenDetails {
+  token: string;
+  expiresAt: string;
+}
+
+function createToken(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function nextExpiry(): string { return new Date(Date.now() + PUBLIC_ACCESS_TOKEN_TTL_MS).toISOString(); }
+
+function notifyTokenChange(details: PublicAccessTokenDetails): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('public-access-token-changed', { detail: details }));
+}
+
+async function demoTokenDetails(): Promise<PublicAccessTokenDetails> {
+  const token = await loadJSON<string>(KEYS.publicAccessToken, '');
+  const expiresAt = await loadJSON<string>(KEYS.publicAccessTokenExpiresAt, '');
+  if (token && expiresAt && Date.parse(expiresAt) > Date.now() + TOKEN_RENEW_BEFORE_MS) return { token, expiresAt };
+  const details = { token: token || demoPublicAccessToken(), expiresAt: nextExpiry() };
+  await Promise.all([saveJSON(KEYS.publicAccessToken, details.token), saveJSON(KEYS.publicAccessTokenExpiresAt, details.expiresAt)]);
+  return details;
+}
+
+async function cloudTokenDetails(): Promise<PublicAccessTokenDetails> {
+  const storeId = useAuth().currentStore.value?.id;
+  if (!supabase || !storeId) throw new Error('未选择门店');
+  const { data, error } = await supabase.from('stores').select('public_access_token,public_access_token_expires_at').eq('id', storeId).single();
+  if (error) throw error;
+  if (!data?.public_access_token || !data.public_access_token_expires_at) throw new Error('门店访问令牌未生成，请重试');
+  return { token: data.public_access_token, expiresAt: data.public_access_token_expires_at };
+}
+
+export async function loadPublicAccessTokenDetails(): Promise<PublicAccessTokenDetails> {
+  const details = isDemoMode ? await demoTokenDetails() : await cloudTokenDetails();
+  if (Date.parse(details.expiresAt) <= Date.now() + TOKEN_RENEW_BEFORE_MS) return rotatePublicAccessTokenDetails();
+  return details;
+}
 
 export async function loadPublicAccessToken(): Promise<string> {
+  return (await loadPublicAccessTokenDetails()).token;
+}
+
+export async function rotatePublicAccessTokenDetails(): Promise<PublicAccessTokenDetails> {
+  const details = { token: createToken(), expiresAt: nextExpiry() };
   if (isDemoMode) {
-    const stored = await loadJSON<string>(KEYS.publicAccessToken, '');
-    if (stored) return stored;
-    const generated = demoPublicAccessToken();
-    await saveJSON(KEYS.publicAccessToken, generated);
-    return generated;
+    await Promise.all([saveJSON(KEYS.publicAccessToken, details.token), saveJSON(KEYS.publicAccessTokenExpiresAt, details.expiresAt)]);
+    notifyTokenChange(details);
+    return details;
   }
   const storeId = useAuth().currentStore.value?.id;
   if (!supabase || !storeId) throw new Error('未选择门店');
-  const { data, error } = await supabase.from('stores').select('public_access_token').eq('id', storeId).single();
+  const { error } = await supabase.from('stores').update({ public_access_token: details.token, public_access_token_expires_at: details.expiresAt }).eq('id', storeId);
   if (error) throw error;
-  if (!data?.public_access_token) throw new Error('门店访问令牌未生成，请重试');
-  return data.public_access_token;
+  notifyTokenChange(details);
+  return details;
 }
 
 export async function rotatePublicAccessToken(): Promise<string> {
-  const bytes = new Uint8Array(24);
-  crypto.getRandomValues(bytes);
-  const token = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-  if (isDemoMode) {
-    await saveJSON(KEYS.publicAccessToken, token);
-    return token;
+  return (await rotatePublicAccessTokenDetails()).token;
+}
+
+function scheduleTokenRefresh(details: PublicAccessTokenDetails): void {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  const waitMs = Math.max(1_000, Date.parse(details.expiresAt) - Date.now() - TOKEN_RENEW_BEFORE_MS);
+  refreshTimer = setTimeout(() => {
+    void loadPublicAccessTokenDetails().then(scheduleTokenRefresh).catch(() => undefined);
+  }, waitMs);
+}
+
+/** Keeps the on-screen customer QR fresh while the merchant application is running. */
+export function startPublicAccessTokenAutoRefresh(): void {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  void loadPublicAccessTokenDetails().then(scheduleTokenRefresh).catch(() => undefined);
+  if (!visibilityListenerRegistered && typeof document !== 'undefined') {
+    visibilityListenerRegistered = true;
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) void loadPublicAccessTokenDetails().then(scheduleTokenRefresh).catch(() => undefined);
+    });
   }
-  const storeId = useAuth().currentStore.value?.id;
-  if (!supabase || !storeId) throw new Error('未选择门店');
-  const { error } = await supabase.from('stores').update({ public_access_token: token }).eq('id', storeId);
-  if (error) throw error;
-  return token;
 }
 
 export async function saveProfile(patch: Partial<StoreProfile>): Promise<StoreProfile> {
-  storeProfile.value = { ...storeProfile.value, ...patch };
+  const validation = validateStoreProfile({ ...storeProfile.value, ...patch });
+  if (!validation.valid) throw new Error(validation.errors[0]);
+  storeProfile.value = validation.profile;
   await persistProfile();
   return storeProfile.value;
 }

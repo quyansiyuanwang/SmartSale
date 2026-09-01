@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, watch } from 'vue'
 import App from './App.vue'
 import router from './router';
 
@@ -31,14 +31,17 @@ registerSW({ immediate: true });
 /* Load local data before mounting */
 import { loadAll } from './services/data';
 import { useAuth } from './composables/useAuth';
-import { configureSupabase } from './lib/supabase';
+import { configureSupabase, isDemoMode } from './lib/supabase';
+import { startPublicAccessTokenAutoRefresh } from './services/store.service';
 
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
 
 configureSupabase();
-useAuth().initializeAuth().then(loadAll).finally(() => {
+const auth = useAuth();
+watch(auth.currentStore, (store) => { if (store) startPublicAccessTokenAutoRefresh(); });
+auth.initializeAuth().then(async () => { await loadAll(); if (isDemoMode || auth.currentStore.value) startPublicAccessTokenAutoRefresh(); }).finally(() => {
   router.isReady().then(() => {
     app.mount('#app');
   });

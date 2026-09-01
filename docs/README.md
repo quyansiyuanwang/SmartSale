@@ -27,7 +27,7 @@
 | 已登录商家首页 | `https://app.example.com/tabs/home` | 需要 |
 | 顾客门店页 | `https://app.example.com/s/<store-slug>` | 不需要 |
 
-`<store-slug>` 在首次建店时自动生成。商家应在“我的 -> 门店服务与二维码”下载或复制其固定顾客入口，不要手工猜测 slug。
+`<store-slug>` 在首次建店时自动生成。商家应在“我的 -> 门店服务与二维码”获取带动态令牌的顾客入口，不要手工猜测 slug 或省略 `token` 参数。
 
 ## 阅读顺序
 

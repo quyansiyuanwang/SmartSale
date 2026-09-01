@@ -42,20 +42,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { IonPage, IonContent, IonButton, IonIcon } from '@ionic/vue';
 import { chatbubbles, refresh, sparkles, storefront } from 'ionicons/icons';
 import { resetAll } from '@/services/data';
 import { runBuyerWorkflow } from '@/services/agent-orchestrator.service';
 import { showToast } from '@/composables/useToast';
-import { demoPublicAccessToken, publicStoreUrl } from '@/lib/platform-config';
+import { publicStoreUrl } from '@/lib/platform-config';
+import { loadPublicAccessToken } from '@/services/store.service';
 
 const router = useRouter();
 const running = ref(false);
 
 function go(path: string) { void router.push(path); }
-const buyerEntry = publicStoreUrl('demo-store', demoPublicAccessToken());
+const buyerEntry = ref('/');
+async function refreshBuyerEntry() { buyerEntry.value = publicStoreUrl('demo-store', await loadPublicAccessToken()); }
+function handleTokenChange(event: Event) { const details = (event as CustomEvent<{ token: string }>).detail; if (details?.token) buyerEntry.value = publicStoreUrl('demo-store', details.token); }
+onMounted(() => { window.addEventListener('public-access-token-changed', handleTokenChange); void refreshBuyerEntry(); });
+onUnmounted(() => window.removeEventListener('public-access-token-changed', handleTokenChange));
 
 async function runFlow() {
   if (running.value) return;
@@ -74,6 +79,7 @@ async function runFlow() {
 
 async function resetDemo() {
   await resetAll();
+  await refreshBuyerEntry();
   await showToast('已恢复初始演示数据', 'success');
 }
 </script>

@@ -12,9 +12,10 @@ Deno.serve(async (request) => {
   try {
     const { slug, token, question, messages = [] } = await request.json();
     if (typeof slug !== 'string' || !/^[a-z0-9-]{3,64}$/.test(slug) || typeof question !== 'string' || !question.trim() || question.length > maxQuestionLength || !Array.isArray(messages)) return json({ error: 'invalid_request' }, 400, request);
-    const { data: store, error: storeError } = await admin.from('stores').select('id,name,address,hours,welcome,default_model_id,service_status,public_enabled,public_access_token').eq('slug', slug).single();
+    const { data: store, error: storeError } = await admin.from('stores').select('id,name,address,hours,welcome,default_model_id,service_status,public_enabled,public_access_token,public_access_token_expires_at').eq('slug', slug).single();
     if (storeError || !store) return json({ error: 'store_not_found' }, 404, request);
     if (!token || token !== store.public_access_token) return json({ error: 'invalid_token' }, 403, request);
+    if (new Date(store.public_access_token_expires_at).getTime() <= Date.now()) return json({ error: 'token_expired' }, 403, request);
     if (store.service_status !== 'active' || !store.public_enabled) return json({ error: 'store_suspended' }, 423, request);
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
     const since = new Date(Date.now() - 60_000).toISOString();

@@ -17,7 +17,7 @@ import { createProduct, updateProduct, deleteProduct, deleteProducts, listProduc
 import { ProductInput } from '@/types';
 import { addQuery, markQueriesFollowed } from '@/services/query.service';
 import { createPromotion, setPromotionActive, deletePromotion } from '@/services/promotion.service';
-import { loadPublicServiceSettings, savePublicServiceSettings } from '@/services/store.service';
+import { loadPublicAccessToken, loadPublicServiceSettings, savePublicServiceSettings } from '@/services/store.service';
 
 const input: ProductInput = {
   name: '测试商品', barcode: '999', category: '五金',
@@ -86,17 +86,19 @@ describe('存储与种子数据', () => {
     await savePublicServiceSettings({ serviceStatus: 'active', publicEnabled: false });
     expect((await loadPublicServiceSettings()).publicEnabled).toBe(false);
 
-    await loadPublicStore('demo-store');
+    const token = await loadPublicAccessToken();
+    await expect(loadPublicStore('demo-store')).rejects.toThrow('顾客入口令牌无效');
+    await loadPublicStore('demo-store', token);
     expect(publicStoreStatus.value).toBe('suspended');
 
     await savePublicServiceSettings({ serviceStatus: 'active', publicEnabled: true });
-    await loadPublicStore('demo-store');
+    await loadPublicStore('demo-store', token);
     expect(publicStoreStatus.value).toBe('active');
 
     await savePublicServiceSettings({ serviceStatus: 'active', publicEnabled: false });
     await resetAll();
     expect((await loadPublicServiceSettings()).publicEnabled).toBe(true);
-    await loadPublicStore('demo-store');
+    await loadPublicStore('demo-store', token);
     expect(publicStoreStatus.value).toBe('active');
   });
 });

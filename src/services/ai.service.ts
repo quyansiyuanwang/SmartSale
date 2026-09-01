@@ -94,7 +94,7 @@ async function callGateway(question: string, signal?: AbortSignal, messages: Buy
   const { supabaseUrl, supabaseAnonKey } = getPlatformConfig();
   const token = new URLSearchParams(window.location.search).get('token');
   const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey }, body: JSON.stringify({ slug, token, question, messages: messages.slice(-6).map((message) => ({ role: message.role, content: message.text })) }), signal });
-  if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'store_suspended' ? '门店服务已暂停' : data?.error === 'ai_not_configured' ? '平台 AI 服务暂不可用' : 'AI 服务暂不可用，请稍后重试'); }
+  if (!response.ok || !response.body) { const data = await response.json().catch(() => null); throw new Error(data?.error === 'store_suspended' ? '门店服务已暂停' : data?.error === 'invalid_token' || data?.error === 'token_expired' ? '顾客入口二维码已失效，请扫描门店最新二维码' : data?.error === 'ai_not_configured' ? '平台 AI 服务暂不可用' : 'AI 服务暂不可用，请稍后重试'); }
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let answer = '';
   let complete = false;
   while (!complete) { const { value, done } = await reader.read(); complete = done; if (done) break; const lines = decoder.decode(value, { stream: true }).split('\n'); for (const line of lines) { if (!line.startsWith('data:')) continue; const data = line.slice(5).trim(); if (!data || data === '[DONE]') continue; try { answer += JSON.parse(data)?.choices?.[0]?.delta?.content ?? ''; } catch { /* SSE boundary */ } } }
