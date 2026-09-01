@@ -67,6 +67,9 @@ export async function deleteProducts(ids: string[]): Promise<void> {
 }
 
 export async function adjustStock(id: string, delta: number): Promise<Product | undefined> {
+  if (!Number.isInteger(delta) || !Number.isFinite(delta)) {
+    throw new Error('库存变更数量必须是整数');
+  }
   const p = products.value.find((x) => x.id === id);
   if (!p) return undefined;
   p.stock = Math.max(0, p.stock + delta);

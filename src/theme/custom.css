@@ -341,7 +341,7 @@
 .week-segment { margin-bottom: 10px; }
 .insight-actions { display: flex; align-items: center; gap: 6px; }
 .buyer-product-desc { overflow: hidden; margin-top: 4px; color: #63766d; font-size: 11px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }.buyer-product.soldout { opacity: 0.55; }
-.alerts-topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.alerts-topbar ion-note { flex: 1; }
+.alerts-topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.alerts-topbar ion-note { flex: 1; }.alert-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }.alert-actions ion-button { margin: 0; }
 .promo-manage-list { margin: 0; }
 @media (max-width: 767px) {
   .insight-actions { grid-column: 2; justify-self: start; }
