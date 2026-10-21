@@ -39,3 +39,11 @@ npm-debug.log*
 
 # vite-plugin-pwa dev cache
 /dev-dist
+
+# Local arena deployment workspace: an external host used for demos, not part of
+# this project's implementation. Probe scripts, generated secrets, deployment
+# notes and build env stay untracked.
+/.deploy/
+/deploy-arena/
+/.env.arena
+/docs/11-arena-deployment.md
